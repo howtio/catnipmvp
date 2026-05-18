@@ -53,6 +53,11 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
           selectedSkills: enrichedContext.skillNames,
           loadedDocuments: enrichedContext.docs.coreDocuments.map((document) => document.path),
         };
+        deps.reportLogger.write({
+          ts: report.finishedAt,
+          event: "run.report",
+          payload: report,
+        });
 
         deps.eventbus.publish({
           type: "run.finished",
@@ -61,7 +66,7 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
         });
 
         console.log(
-          `[harness] run ${runId} finished with skills=${report.selectedSkills.join(",") || "none"}`,
+          `[harness] run ${runId} finished success=${report.success} skills=${report.selectedSkills.join(",") || "none"}`,
         );
 
         return report;

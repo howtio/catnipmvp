@@ -8,9 +8,13 @@ import { createRunnerLayer } from "./layers/07-runner/index.js";
 import { createEventBusLayer } from "./layers/08-eventbus/index.js";
 import { createToolRegistryLayer } from "./layers/09-tool-registry/index.js";
 import { createExecutorLayer } from "./layers/10-executor/index.js";
+import { createJsonlLogger } from "./shared/logger/jsonlLogger.js";
 
 export function bootstrapCatnipAgent() {
-  const eventbus = createEventBusLayer();
+  const jsonlLogger = createJsonlLogger();
+  const eventbus = createEventBusLayer({
+    logger: jsonlLogger,
+  });
   const toolRegistry = createToolRegistryLayer();
   const executor = createExecutorLayer({
     workspaceRoot: process.cwd(),
@@ -28,6 +32,7 @@ export function bootstrapCatnipAgent() {
     skills,
     runner,
     eventbus,
+    reportLogger: jsonlLogger,
   });
   const queue = createQueueLayer();
   const worker = createWorkerLayer({
@@ -50,5 +55,6 @@ export function bootstrapCatnipAgent() {
     eventbus,
     toolRegistry,
     executor,
+    jsonlLogger,
   };
 }

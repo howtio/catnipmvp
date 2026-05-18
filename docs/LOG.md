@@ -1,5 +1,55 @@
 # Construction Log
 
+## 2026-05-18 / Phase 6 / 打通 JSONL 日志、run report 与基础测试
+
+### 目标
+
+补齐最小可观测性和回归验证能力，让事件日志、run report 和自动化测试形成基本闭环。
+
+### 本次修改
+
+- `JsonlLogger` 改为真实落盘到 `logs/catnip.jsonl`
+- EventBus 在发布事件时自动写 JSONL
+- Harness 在 run 完成时写入 `run.report`
+- 新增 `npm test` 脚本，使用 `node:test`
+- 新增 guard 与只读工具执行的基础测试
+- 扩展 `tsconfig.json` 以编译测试文件
+
+### 修改文件
+
+- package.json
+- tsconfig.json
+- src/bootstrap.ts
+- src/shared/logger/jsonlLogger.ts
+- src/layers/04-harness/types.ts
+- src/layers/04-harness/wrapper.ts
+- src/layers/08-eventbus/wrapper.ts
+- tests/guard.test.ts
+- tests/tools.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/04-harness.md
+- docs/progress/layers/08-eventbus.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，4 个测试全部通过
+- `node dist/src/main.js "phase6 logs and tests smoke test"`：通过
+- `logs/catnip.jsonl`：成功写入事件与 `run.report`
+
+### 风险
+
+- 当前测试仍以基础单元测试为主，尚未覆盖完整端到端场景
+- JSONL 日志当前只做追加写入，没有轮转或大小控制
+- final report 目前进入 JSONL，但还没有单独的报表文件或查询接口
+
+### 下一步
+
+- 继续补 `write_file`、`patch_file`、`shell_exec`
+- 或开始设计更完整的 Runner 决策与 provider adapter
+
 ## 2026-05-18 / Phase 5 / 落地第一批只读工具
 
 ### 目标

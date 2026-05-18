@@ -78,3 +78,29 @@
 ### 下一步
 
 - 在后续阶段补 run 级日志和更细的验收结构
+
+## 2026-05-18 / Phase 6 / 落盘 run report
+
+### 当前目标
+
+让 Harness 产出的 final report 不只停留在内存对象，而是进入统一日志流。
+
+### 本次完成
+
+- 为 Harness 注入 report logger
+- 在 run 成功完成时写入 `run.report`
+- 输出包含 `success` 和 `skills` 的摘要日志
+
+### 当前状态
+
+- 已完成：run report JSONL 落盘
+- 进行中：report 仍只写 JSONL
+- 未完成：独立报表文件、失败分层、验收明细
+
+### 风险与阻塞
+
+- 当前 run 失败时仍未生成完整失败报告对象
+
+### 下一步
+
+- 在后续阶段继续补失败报告和验收字段

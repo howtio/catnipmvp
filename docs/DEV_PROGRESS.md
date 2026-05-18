@@ -4,7 +4,7 @@
 
 ### 进行中
 
-- 推进 Phase 6 的日志、报告与测试补强
+- 评估后续写入类工具与更细 guard 的实现顺序
 
 ### 已完成
 
@@ -37,20 +37,23 @@
 - 完成 Phase 3 最小链路：Runner 工具请求、EventBus 等待结果、Executor 模拟返回
 - 完成 Phase 4 最小骨架：Tool Registry 工具元数据扩展、Executor guard 准入检查
 - 完成 Phase 5 第一批最小只读工具：`list_files`、`read_file`、`git_diff`
+- 完成 Phase 6 最小闭环：JSONL 事件日志、run report 落盘、`npm test`
 - `npm run typecheck` 通过
 - `npm run build` 通过
+- `npm test` 通过
 - `node dist/src/main.js "phase1 smoke test"` 冒烟通过
 - `node dist/src/main.js "phase2 context and skills smoke test"` 冒烟通过
 - `node dist/src/main.js "phase3 tool event smoke test"` 冒烟通过
 - `node dist/src/main.js "phase4 guard skeleton smoke test"` 冒烟通过
 - `node dist/src/main.js "phase5 readonly tool smoke test"` 冒烟通过
+- `node dist/src/main.js "phase6 logs and tests smoke test"` 冒烟通过
 
 ### 未开始
 
 - Runner provider 抽象
 - DeepSeek 接入
 - GitHub 仓库实际接入
-- 测试框架与 `npm test` 脚本
+- 写入类工具与 shell 执行
 
 ### 备注
 

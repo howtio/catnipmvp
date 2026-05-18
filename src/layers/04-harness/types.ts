@@ -26,6 +26,9 @@ export interface HarnessLayerDeps {
   eventbus: {
     publish(event: { type: string; [key: string]: unknown }): void;
   };
+  reportLogger: {
+    write(entry: Record<string, unknown>): void;
+  };
 }
 
 export interface HarnessLayerApi {
