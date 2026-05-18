@@ -167,3 +167,45 @@
 
 - 由用户提供剩余仓库信息或先完成 clone / 凭证配置
 - 然后再把仓库专属分支与回滚规则固化到主文档
+
+## 2026-05-18 / Phase 0 / 完成 GitHub 仓库首次接入与推送
+
+### 目标
+
+把当前本地文档骨架初始化为 git 仓库，接入 GitHub 远程仓库，并完成首次推送。
+
+### 本次修改
+
+- 初始化本地 git 仓库
+- 设置当前分支为 `main`
+- 添加并提交当前文档骨架
+- 配置 GitHub SSH remote
+- 处理 SSH 22 端口不可达问题，改用 `ssh.github.com:443`
+- 合并远程仓库已有的初始 `README.md` 提交
+- 成功推送本地 `main` 到远程仓库
+- 更新主文档与总进度文档中的仓库状态
+
+### 修改文件
+
+- /home/howtion/.ssh/config
+- README.md
+- CODEX_MASTER_REQUIREMENTS.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+
+### 验证结果
+
+- `ssh -T git@github.com`：成功认证
+- `git fetch origin main`：成功
+- `git merge origin/main --allow-unrelated-histories`：成功
+- `git push -u origin main`：成功
+
+### 风险
+
+- 当前 SSH 依赖 `ssh.github.com:443` 通道，后续环境变化时需重新验证
+- 目前仓库仍以文档骨架为主，尚未进入代码与测试阶段
+
+### 下一步
+
+- 继续强化主文档中的仓库专属测试与回滚策略
+- 或进入 TypeScript 基础骨架阶段

@@ -625,12 +625,15 @@ DeepSeek 接入
 当前已知仓库：
 
 - GitHub 仓库地址：`https://github.com/howtio/catnipmvp.git`
+- Git SSH 地址：`git@github.com:howtio/catnipmvp.git`
 
 当前状态：
 
-- 当前工作目录 `/home/howtion/catnip` 不是 git 仓库
-- 当前环境无法直接读取该远程仓库分支信息
-- GitHub 访问返回需要凭证，说明仓库可能是私有仓库，或当前环境未配置权限
+- 当前工作目录 `/home/howtion/catnip` 已初始化为 git 仓库
+- 当前分支：`main`
+- 当前 remote：`origin -> git@github.com:howtio/catnipmvp.git`
+- SSH 已通过 `ssh.github.com:443` 打通
+- 当前文档骨架已成功推送到远程仓库
 
 ### 必需信息
 
@@ -707,3 +710,11 @@ build 命令：
 1. 是否需要 clone 远程仓库
 2. clone 的本地路径
 3. 是否具备访问私有仓库的凭证
+
+如果当前目录已经是 git 仓库，则新的 Codex 必须优先检查：
+
+1. `git status`
+2. `git branch --show-current`
+3. `git remote -v`
+4. `git fetch origin`
+5. 是否存在未推送提交
