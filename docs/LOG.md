@@ -1,5 +1,49 @@
 # Construction Log
 
+## 2026-05-18 / Phase 4 / 建立 Tool Registry 与 Executor guard 骨架
+
+### 目标
+
+在不进入真实副作用执行的前提下，补齐工具定义元数据和 Executor 执行前准入检查骨架。
+
+### 本次修改
+
+- 扩展 `ToolDefinition`，增加 `category`、`argShape`、`stage`
+- 在 Tool Registry 中补齐后续计划工具的元数据占位
+- 新增 `guardToolCall`，统一校验工具注册、权限匹配、参数结构、workspaceRoot
+- Executor 改为先运行 guard，再返回统一成功或失败事件
+- 修正 Executor 事件类型与通用事件总线的兼容问题
+
+### 修改文件
+
+- src/bootstrap.ts
+- src/shared/types/tool.ts
+- src/layers/09-tool-registry/wrapper.ts
+- src/layers/10-executor/guard.ts
+- src/layers/10-executor/types.ts
+- src/layers/10-executor/wrapper.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/09-tool-registry.md
+- docs/progress/layers/10-executor.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `node dist/src/main.js "phase4 guard skeleton smoke test"`：通过
+
+### 风险
+
+- guard 当前只做最小结构校验，尚未实现 pathGuard 和 commandGuard
+- 工具仍返回模拟结果，尚未进入真实文件和命令副作用执行
+- Tool Registry 目前只有元数据，还没有参数 schema 和执行器绑定
+
+### 下一步
+
+- 进入 Phase 5，实现最小工具集和更细的 guard 规则
+- 保持每阶段完成后验证、写日志、提交推送
+
 ## 2026-05-18 / Phase 3 / 打通最小工具事件链路
 
 ### 目标

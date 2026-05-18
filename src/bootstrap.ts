@@ -13,6 +13,7 @@ export function bootstrapCatnipAgent() {
   const eventbus = createEventBusLayer();
   const toolRegistry = createToolRegistryLayer();
   const executor = createExecutorLayer({
+    workspaceRoot: process.cwd(),
     eventbus,
     toolRegistry,
   });

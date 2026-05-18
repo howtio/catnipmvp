@@ -4,7 +4,7 @@
 
 ### 进行中
 
-- 推进 Phase 4 的 Tool Registry / Executor 权限边界细化与工具定义扩展
+- 推进 Phase 5 的最小工具实现与 guard 细化
 
 ### 已完成
 
@@ -35,11 +35,13 @@
 - 完成 Phase 1 最小链路：Gateway 创建 CLI 任务、Queue 状态等待、Worker 单任务消费
 - 完成 Phase 2 最小链路：Harness run 生命周期、Context 文档装载、Skills 技能注入
 - 完成 Phase 3 最小链路：Runner 工具请求、EventBus 等待结果、Executor 模拟返回
+- 完成 Phase 4 最小骨架：Tool Registry 工具元数据扩展、Executor guard 准入检查
 - `npm run typecheck` 通过
 - `npm run build` 通过
 - `node dist/src/main.js "phase1 smoke test"` 冒烟通过
 - `node dist/src/main.js "phase2 context and skills smoke test"` 冒烟通过
 - `node dist/src/main.js "phase3 tool event smoke test"` 冒烟通过
+- `node dist/src/main.js "phase4 guard skeleton smoke test"` 冒烟通过
 
 ### 未开始
 

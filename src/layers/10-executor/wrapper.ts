@@ -1,36 +1,47 @@
 import type { ExecutorLayerApi, ExecutorLayerDeps } from "./types.js";
+import { guardToolCall } from "./guard.js";
+import type { ToolCallRequest } from "./types.js";
+
+function isToolCallRequestEvent(event: { type: string; [key: string]: unknown }): event is ToolCallRequest {
+  return event.type === "tool.call.requested";
+}
 
 export function createExecutorLayer(deps: ExecutorLayerDeps): ExecutorLayerApi {
   return {
     start(): void {
       deps.eventbus.subscribe("tool.call.requested", (event) => {
-        if (event.type !== "tool.call.requested") {
+        if (!isToolCallRequestEvent(event)) {
           return;
         }
 
-        const tool = deps.toolRegistry.getTool(String(event.toolName));
-        if (!tool) {
+        const guardResult = guardToolCall(event, {
+          workspaceRoot: deps.workspaceRoot,
+          toolRegistry: deps.toolRegistry,
+        });
+        if (!guardResult.ok) {
           deps.eventbus.publish({
             type: "tool.call.failed",
-            runId: String(event.runId),
-            toolCallId: String(event.toolCallId),
+            runId: event.runId,
+            toolCallId: event.toolCallId,
             ok: false,
-            error: `Unknown tool: ${String(event.toolName)}`,
+            error: guardResult.error,
           });
           return;
         }
 
         deps.eventbus.publish({
           type: "tool.call.result",
-          runId: String(event.runId),
-          toolCallId: String(event.toolCallId),
+          runId: event.runId,
+          toolCallId: event.toolCallId,
           ok: true,
           result: {
-            toolName: tool.name,
+            toolName: guardResult.tool.name,
             simulated: true,
-            permission: tool.permission,
-            args: event.args,
-            message: `Executor skeleton handled ${tool.name}.`,
+            permission: guardResult.tool.permission,
+            category: guardResult.tool.category,
+            stage: guardResult.tool.stage,
+            args: guardResult.normalizedArgs,
+            message: `Executor skeleton handled ${guardResult.tool.name}.`,
           },
         });
       });
