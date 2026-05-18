@@ -1,6 +1,7 @@
 import type { RunTask } from "../../shared/types/runTask.js";
 import type { RunContext } from "../05-context/index.js";
 import type { EnrichedRunContext } from "../06-skills/index.js";
+import type { RunnerRunResult } from "../07-runner/index.js";
 
 export interface RunFinalReport {
   runId: string;
@@ -11,6 +12,9 @@ export interface RunFinalReport {
   finishedAt: string;
   selectedSkills: string[];
   loadedDocuments: string[];
+  stepsUsed: number;
+  finalAnswer: string;
+  toolSummaryCount: number;
 }
 
 export interface HarnessLayerDeps {
@@ -21,7 +25,7 @@ export interface HarnessLayerDeps {
     injectSkills(context: RunContext): Promise<EnrichedRunContext>;
   };
   runner: {
-    run(context: EnrichedRunContext): Promise<void>;
+    run(context: EnrichedRunContext): Promise<RunnerRunResult>;
   };
   eventbus: {
     publish(event: { type: string; [key: string]: unknown }): void;

@@ -108,3 +108,32 @@
 ### 下一步
 
 - 在后续阶段引入更完整的 step 决策与模型接口
+
+## 2026-05-18 / Large Step / 引入 provider adapter 与多步计划
+
+### 当前目标
+
+把 Runner 从单步规则路由升级到可执行多步工具计划的骨架，并为未来模型 provider 固定接口。
+
+### 本次完成
+
+- 新增 `RunnerProvider` 接口
+- 新增 heuristic provider
+- 支持一次 run 规划多个工具调用
+- 记录每一步工具结果摘要
+- 生成统一 `finalAnswer`
+- 发布 `agent.answer.produced`
+
+### 当前状态
+
+- 已完成：provider adapter 骨架与多步工具计划
+- 进行中：provider 仍为本地 heuristic
+- 未完成：AI SDK 接口、真实模型决策、step 上限与重试
+
+### 风险与阻塞
+
+- 当前多步计划仍依赖关键词规则
+
+### 下一步
+
+- 在后续阶段接入真实 provider adapter 或完善 step 控制

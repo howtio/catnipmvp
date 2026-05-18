@@ -1,74 +1,15 @@
 import type { RunnerLayerApi, RunnerLayerDeps } from "./types.js";
 import type { EnrichedRunContext } from "../06-skills/index.js";
 import { createId } from "../../shared/utils/createId.js";
-
-function buildToolRequest(taskInput: string): { toolName: string; args: Record<string, unknown> } {
-  const normalized = taskInput.toLowerCase();
-
-  if (normalized.includes("git diff") || normalized.includes("diff")) {
-    return {
-      toolName: "git_diff",
-      args: {},
-    };
-  }
-
-  if (normalized.includes("read file")) {
-    return {
-      toolName: "read_file",
-      args: {
-        path: "README.md",
-      },
-    };
-  }
-
-  if (normalized.includes("write file")) {
-    return {
-      toolName: "write_file",
-      args: {
-        path: "workspaces/demo/generated.txt",
-        content: `Generated from task: ${taskInput}\n`,
-      },
-    };
-  }
-
-  if (normalized.includes("patch file")) {
-    return {
-      toolName: "patch_file",
-      args: {
-        path: "workspaces/demo/generated.txt",
-        search: "Generated",
-        replace: "Patched",
-      },
-    };
-  }
-
-  if (normalized.includes("shell")) {
-    return {
-      toolName: "shell_exec",
-      args: {
-        command: "git",
-        argv: ["status"],
-      },
-    };
-  }
-
-  return {
-    toolName: "list_files",
-    args: {
-      path: ".",
-    },
-  };
-}
+import { buildFinalAnswer, summarizeToolOutcome } from "./planner.js";
 
 export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
   return {
-    async run(context: EnrichedRunContext): Promise<void> {
+    async run(context: EnrichedRunContext) {
       const runId = context.runId;
       const availableTools = deps.toolRegistry.listTools();
-      const request = buildToolRequest(context.task.input);
-      const selectedTool = availableTools.find((tool) => tool.name === request.toolName);
-
-      if (!selectedTool) {
+      const plan = await deps.provider.plan(context);
+      if (plan.plannedToolCalls.length === 0) {
         deps.eventbus.publish({
           type: "agent.step.finished",
           runId,
@@ -78,37 +19,69 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
             contextKeys: Object.keys(context),
           },
         });
-        return;
+        return {
+          stepsUsed: 0,
+          finalAnswer: "No tool calls were executed.",
+          toolSummaries: [],
+        };
       }
 
-      const toolCallId = createId("toolcall");
-      const toolResultPromise = deps.eventbus.waitForToolResult(runId, toolCallId);
-      deps.eventbus.publish({
-        type: "tool.call.requested",
-        runId,
-        toolCallId,
-        toolName: selectedTool.name,
-        args: request.args,
-        workspaceRoot: context.workspace.root,
-        permission: selectedTool.permission,
-      });
+      const toolSummaries = [];
+      let stepNumber = 0;
 
-      const toolResult = await toolResultPromise;
-      deps.eventbus.publish({
-        type: "agent.step.finished",
-        runId,
-        stepNumber: 1,
-        usage: {
-          mode: "tool-skeleton",
-          contextKeys: Object.keys(context),
+      for (const plannedCall of plan.plannedToolCalls) {
+        stepNumber += 1;
+        const selectedTool = availableTools.find((tool) => tool.name === plannedCall.toolName);
+        if (!selectedTool) {
+          throw new Error(`Runner selected an unknown tool: ${plannedCall.toolName}`);
+        }
+
+        const toolCallId = createId("toolcall");
+        const toolResultPromise = deps.eventbus.waitForToolResult(runId, toolCallId);
+        deps.eventbus.publish({
+          type: "tool.call.requested",
+          runId,
+          toolCallId,
           toolName: selectedTool.name,
-          toolOk: toolResult.ok,
-        },
+          args: plannedCall.args,
+          workspaceRoot: context.workspace.root,
+          permission: selectedTool.permission,
+        });
+
+        const toolResult = await toolResultPromise;
+        const toolSummary = summarizeToolOutcome(plannedCall, toolResult);
+        toolSummaries.push(toolSummary);
+
+        deps.eventbus.publish({
+          type: "agent.step.finished",
+          runId,
+          stepNumber,
+          usage: {
+            mode: "tool-skeleton",
+            contextKeys: Object.keys(context),
+            toolName: selectedTool.name,
+            toolOk: toolResult.ok,
+            reason: plannedCall.reason,
+          },
+        });
+
+        if (!toolResult.ok) {
+          throw new Error(toolResult.error);
+        }
+      }
+
+      const finalAnswer = buildFinalAnswer(toolSummaries);
+      deps.eventbus.publish({
+        type: "agent.answer.produced",
+        runId,
+        answer: finalAnswer,
       });
 
-      if (!toolResult.ok) {
-        throw new Error(toolResult.error);
-      }
+      return {
+        stepsUsed: stepNumber,
+        finalAnswer,
+        toolSummaries,
+      };
     },
   };
 }

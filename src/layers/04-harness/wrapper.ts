@@ -40,7 +40,7 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
           stage: "runner.run.started",
         });
 
-        await deps.runner.run(enrichedContext);
+        const runResult = await deps.runner.run(enrichedContext);
         success = true;
 
         const report = {
@@ -52,6 +52,9 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
           finishedAt: new Date().toISOString(),
           selectedSkills: enrichedContext.skillNames,
           loadedDocuments: enrichedContext.docs.coreDocuments.map((document) => document.path),
+          stepsUsed: runResult.stepsUsed,
+          finalAnswer: runResult.finalAnswer,
+          toolSummaryCount: runResult.toolSummaries.length,
         };
         deps.reportLogger.write({
           ts: report.finishedAt,

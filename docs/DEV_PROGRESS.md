@@ -4,7 +4,7 @@
 
 ### 进行中
 
-- 评估 Runner 多步决策与 provider adapter 的实现顺序
+- 评估 AI SDK provider 接入与真实模型决策的落地顺序
 
 ### 已完成
 
@@ -39,6 +39,7 @@
 - 完成 Phase 5 第一批最小只读工具：`list_files`、`read_file`、`git_diff`
 - 完成 Phase 6 最小闭环：JSONL 事件日志、run report 落盘、`npm test`
 - 完成扩展工具集：`write_file`、`patch_file`、`shell_exec` 与基础工具路由
+- 完成 Runner 扩展：provider adapter 骨架、多步工具计划、最终回答摘要
 - `npm run typecheck` 通过
 - `npm run build` 通过
 - `npm test` 通过
@@ -51,13 +52,14 @@
 - `node dist/src/main.js "write file smoke test"` 冒烟通过
 - `node dist/src/main.js "patch file smoke test"` 冒烟通过
 - `node dist/src/main.js "shell smoke test"` 冒烟通过
+- `node dist/src/main.js "write file then patch file and shell status"` 多步冒烟通过
 
 ### 未开始
 
 - Runner provider 抽象
 - DeepSeek 接入
 - GitHub 仓库实际接入
-- 更完整的多步 Runner 决策
+- AI SDK / DeepSeek provider 落地
 
 ### 备注
 

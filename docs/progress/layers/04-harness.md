@@ -104,3 +104,29 @@
 ### 下一步
 
 - 在后续阶段继续补失败报告和验收字段
+
+## 2026-05-18 / Large Step / 扩展 run report 字段
+
+### 当前目标
+
+让 Harness 记录的不只是 run 成败，还能带出多步执行的摘要结果。
+
+### 本次完成
+
+- 在 report 中增加 `stepsUsed`
+- 在 report 中增加 `finalAnswer`
+- 在 report 中增加 `toolSummaryCount`
+
+### 当前状态
+
+- 已完成：增强版 run report
+- 进行中：失败报告仍较简化
+- 未完成：更完整的验收维度和失败分类
+
+### 风险与阻塞
+
+- 当前 final answer 仍是工具摘要结果
+
+### 下一步
+
+- 在后续阶段继续增强 report 和验收结构

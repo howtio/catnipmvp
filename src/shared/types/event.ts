@@ -19,6 +19,11 @@ export type CatnipEvent =
       usage?: unknown;
     }
   | {
+      type: "agent.answer.produced";
+      runId: string;
+      answer: string;
+    }
+  | {
       type: "tool.call.requested";
       runId: string;
       toolCallId: string;

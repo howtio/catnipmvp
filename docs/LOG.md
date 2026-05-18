@@ -1,5 +1,57 @@
 # Construction Log
 
+## 2026-05-18 / Large Step / Runner 多步计划与 provider adapter 骨架
+
+### 目标
+
+按更大跨度推进 Runner，把它从“单步关键词路由”升级到“可规划多步工具调用并生成最终回答”的骨架，同时为后续 AI SDK provider 留出稳定接口。
+
+### 本次修改
+
+- 新增 `RunnerProvider` 接口
+- 新增本地 `createHeuristicRunnerProvider`
+- 新增 Runner planner 与工具结果摘要逻辑
+- Runner 改为执行多步工具计划，而非单次固定调用
+- 新增 `agent.answer.produced` 事件
+- Harness report 增加 `stepsUsed`、`finalAnswer`、`toolSummaryCount`
+- 新增 Runner 相关测试
+
+### 修改文件
+
+- src/bootstrap.ts
+- src/layers/04-harness/types.ts
+- src/layers/04-harness/wrapper.ts
+- src/layers/07-runner/index.ts
+- src/layers/07-runner/types.ts
+- src/layers/07-runner/wrapper.ts
+- src/layers/07-runner/provider.ts
+- src/layers/07-runner/planner.ts
+- src/shared/types/event.ts
+- tests/runner.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/04-harness.md
+- docs/progress/layers/07-runner.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，10 个测试全部通过
+- `node dist/src/main.js "write file then patch file and shell status"`：通过
+- `logs/catnip.jsonl`：确认写入 3 次工具调用、`agent.answer.produced` 与增强版 `run.report`
+
+### 风险
+
+- 当前 provider 仍是 heuristic 规则，不是真实模型
+- 还没有 step 上限、超时、重试策略
+- 最终回答目前是工具摘要，不是自然语言高质量生成
+
+### 下一步
+
+- 接入 AI SDK provider adapter
+- 或继续细化 Runner 的 step 限制和失败恢复策略
+
 ## 2026-05-18 / Post Phase 6 / 扩展剩余工具与更细 guard
 
 ### 目标
