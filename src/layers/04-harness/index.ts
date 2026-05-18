@@ -1,2 +1,2 @@
 export { createHarnessLayer } from "./wrapper.js";
-export type { HarnessLayerApi, HarnessLayerDeps } from "./types.js";
+export type { HarnessLayerApi, HarnessLayerDeps, RunFinalReport } from "./types.js";

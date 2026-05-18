@@ -51,3 +51,30 @@
 ### 下一步
 
 - 在 Phase 2 中补齐 run 生命周期细节
+
+## 2026-05-18 / Phase 2 / 建立 run 生命周期骨架
+
+### 当前目标
+
+让 Harness 真正拥有一次 run 的标识、阶段事件和基础报告能力。
+
+### 本次完成
+
+- 为每次任务运行生成 `runId`
+- 发布 `run.started`、`run.finished`、`run.heartbeat`
+- 串联 Context、Skills、Runner 的真实阶段切换
+- 生成最小 final report 骨架
+
+### 当前状态
+
+- 已完成：run 生命周期最小骨架
+- 进行中：final report 仍为内存对象
+- 未完成：验收细则、run 级日志落盘、失败分类
+
+### 风险与阻塞
+
+- 当前 report 还未统一输出到日志系统
+
+### 下一步
+
+- 在后续阶段补 run 级日志和更细的验收结构

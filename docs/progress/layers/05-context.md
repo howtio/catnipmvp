@@ -51,3 +51,30 @@
 ### 下一步
 
 - 在 Phase 2 中补齐文档加载与摘要逻辑
+
+## 2026-05-18 / Phase 2 / 补齐核心文档与 workspace 摘要
+
+### 当前目标
+
+让 Context 不再返回占位值，而是提供最小可消费的运行上下文。
+
+### 本次完成
+
+- 读取 `CODEX_MASTER_REQUIREMENTS.md`、`docs/DEV_PROGRESS.md`、`docs/LOG.md` 摘要
+- 生成 workspace 根目录和分层目录摘要
+- 构建最小 `systemPrompt`
+- 统一输出结构化 `RunContext`
+
+### 当前状态
+
+- 已完成：核心文档摘要、workspace 摘要、结构化上下文
+- 进行中：session history 仍为空
+- 未完成：更细粒度文件选择和上下文裁剪
+
+### 风险与阻塞
+
+- 当前文档摘要策略较简单，长文档只截取开头信息
+
+### 下一步
+
+- 在后续阶段继续细化 context 选择策略和 session history 来源

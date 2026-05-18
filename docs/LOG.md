@@ -1,5 +1,57 @@
 # Construction Log
 
+## 2026-05-18 / Phase 2 / 打通 Harness Context Skills 最小运行编排
+
+### 目标
+
+在保持 Runner 仍为骨架的前提下，补齐单次 run 的生命周期管理、核心文档装载和 skills 说明注入。
+
+### 本次修改
+
+- Harness 增加 `runId`、`run.started / run.finished / run.heartbeat` 事件和 final report 骨架
+- Context 改为读取核心文档摘要并生成 workspace 摘要、system prompt
+- Skills 改为扫描 `skills/*/SKILL.md`，按任务输入选择并加载技能说明
+- Runner 使用真实 `runId` 发布 step 完成事件
+- Bootstrap 更新为把 EventBus 注入 Harness
+
+### 修改文件
+
+- src/bootstrap.ts
+- src/layers/03-worker/types.ts
+- src/layers/04-harness/index.ts
+- src/layers/04-harness/types.ts
+- src/layers/04-harness/wrapper.ts
+- src/layers/05-context/index.ts
+- src/layers/05-context/types.ts
+- src/layers/05-context/wrapper.ts
+- src/layers/06-skills/index.ts
+- src/layers/06-skills/types.ts
+- src/layers/06-skills/wrapper.ts
+- src/layers/07-runner/types.ts
+- src/layers/07-runner/wrapper.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/04-harness.md
+- docs/progress/layers/05-context.md
+- docs/progress/layers/06-skills.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `node dist/src/main.js "phase2 context and skills smoke test"`：通过
+
+### 风险
+
+- Context 当前只做摘要读取，尚未构建更细粒度的 workspace 上下文
+- Skills 选择策略仍是最小关键词规则，后续需要更稳定的 registry 策略
+- Harness 已生成 final report 骨架，但尚未落到日志文件或独立输出对象
+
+### 下一步
+
+- 进入 Phase 3，细化 Runner / EventBus / Tool Registry / Executor 骨架和工具事件链路
+- 保持每阶段完成后先验证、再写日志、再提交推送
+
 ## 2026-05-18 / Phase 1 / 打通 Gateway Queue Worker 最小任务链路
 
 ### 目标

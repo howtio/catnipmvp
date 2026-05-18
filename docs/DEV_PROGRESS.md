@@ -4,7 +4,7 @@
 
 ### 进行中
 
-- 推进 Phase 2 的 Harness / Context / Skills 细化实现
+- 推进 Phase 3 的 Runner / EventBus / Tool Registry / Executor 骨架细化
 
 ### 已完成
 
@@ -33,9 +33,11 @@
 - 完成十层 `wrapper.ts / types.ts / index.ts` 空骨架
 - 完成 `src/shared/types`、`logger`、`errors`、`utils` 基础文件
 - 完成 Phase 1 最小链路：Gateway 创建 CLI 任务、Queue 状态等待、Worker 单任务消费
+- 完成 Phase 2 最小链路：Harness run 生命周期、Context 文档装载、Skills 技能注入
 - `npm run typecheck` 通过
 - `npm run build` 通过
 - `node dist/src/main.js "phase1 smoke test"` 冒烟通过
+- `node dist/src/main.js "phase2 context and skills smoke test"` 冒烟通过
 
 ### 未开始
 

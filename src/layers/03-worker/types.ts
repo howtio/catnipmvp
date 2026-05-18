@@ -6,7 +6,7 @@ export interface WorkerLayerDeps {
     setStatus(taskId: string, status: RunTask["status"], patch?: Partial<RunTask>): void;
   };
   harness: {
-    runTask(task: RunTask): Promise<void>;
+    runTask(task: RunTask): Promise<unknown>;
   };
   heartbeatPublisher?: {
     publish(event: {

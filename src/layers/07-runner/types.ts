@@ -1,3 +1,5 @@
+import type { EnrichedRunContext } from "../06-skills/index.js";
+
 export interface RunnerLayerDeps {
   eventbus: {
     publish(event: { type: string; [key: string]: unknown }): void;
@@ -5,5 +7,5 @@ export interface RunnerLayerDeps {
 }
 
 export interface RunnerLayerApi {
-  run(context: Record<string, unknown>): Promise<void>;
+  run(context: EnrichedRunContext): Promise<void>;
 }

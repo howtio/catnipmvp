@@ -25,6 +25,7 @@ export function bootstrapCatnipAgent() {
     context,
     skills,
     runner,
+    eventbus,
   });
   const queue = createQueueLayer();
   const worker = createWorkerLayer({
