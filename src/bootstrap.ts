@@ -9,8 +9,10 @@ import { createEventBusLayer } from "./layers/08-eventbus/index.js";
 import { createToolRegistryLayer } from "./layers/09-tool-registry/index.js";
 import { createExecutorLayer } from "./layers/10-executor/index.js";
 import { createJsonlLogger } from "./shared/logger/jsonlLogger.js";
+import { loadLocalEnvFiles } from "./shared/utils/loadLocalEnv.js";
 
 export function bootstrapCatnipAgent() {
+  loadLocalEnvFiles();
   const jsonlLogger = createJsonlLogger();
   const eventbus = createEventBusLayer({
     logger: jsonlLogger,

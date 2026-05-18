@@ -95,3 +95,12 @@ test("createRunnerProviderFromEnv falls back to heuristic in auto mode without k
 
   assert.equal(plan.plannedToolCalls[0]?.toolName, "list_files");
 });
+
+test("createRunnerProviderFromEnv accepts deepseek mode when key exists", () => {
+  const provider = createRunnerProviderFromEnv({
+    CATNIP_RUNNER_PROVIDER: "deepseek",
+    DEEPSEEK_API_KEY: "test-key",
+  });
+
+  assert.equal(typeof provider.plan, "function");
+});

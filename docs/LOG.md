@@ -1,5 +1,54 @@
 # Construction Log
 
+## 2026-05-18 / Large Step / 本地 secrets 与 DeepSeek 直连 provider
+
+### 目标
+
+把用户本地提供的 DeepSeek 密钥收进 Git 忽略目录，并让 Runner 可以在本地自动加载 secrets 后直接走 DeepSeek provider。
+
+### 本次修改
+
+- 将 `.local-secrets/` 加入 `.gitignore`
+- 建立 `.local-secrets/` 目录约定
+- 新增 `loadLocalEnvFiles`，在 bootstrap 时自动加载 `.local-secrets/*.env`
+- 安装 `@ai-sdk/deepseek`
+- 新增 `createDeepSeekRunnerProvider`
+- 扩展 `createRunnerProviderFromEnv`，支持 `deepseek` 模式与自动回退
+- 修正模型输出工具参数不完整时的归一化逻辑
+
+### 修改文件
+
+- .gitignore
+- package.json
+- package-lock.json
+- src/bootstrap.ts
+- src/shared/utils/loadLocalEnv.ts
+- src/layers/07-runner/index.ts
+- src/layers/07-runner/provider.ts
+- tests/runner.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/07-runner.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，12 个测试全部通过
+- `node dist/src/main.js "readme and git diff"`：通过
+- 在本地 DeepSeek provider 下，成功完成 `read_file` 与 `git_diff` 两步计划
+
+### 风险
+
+- 用户在会话里直接发过密钥，该密钥应视为已暴露，建议后续轮换
+- 当前 DeepSeek provider 只做结构化计划生成，还未进入 AI SDK tool calling 模式
+- `.local-secrets/` 为本地约定，不适合跨环境自动分发
+
+### 下一步
+
+- 接 AI SDK tool calling
+- 或补 Runner 的 step 上限、超时和失败恢复
+
 ## 2026-05-18 / Large Step / 接入 AI SDK provider adapter 骨架
 
 ### 目标

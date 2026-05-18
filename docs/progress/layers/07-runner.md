@@ -167,3 +167,30 @@
 
 - 在有 key 的环境下验证 AI SDK 计划输出
 - 或继续把 Runner 接到更完整的模型循环
+
+## 2026-05-18 / Large Step / 接入本地 DeepSeek provider
+
+### 当前目标
+
+让 Runner 能在本地 secrets 存在时直接使用 DeepSeek provider，而不是只支持 AI Gateway 或 heuristic。
+
+### 本次完成
+
+- 新增 `createDeepSeekRunnerProvider`
+- 新增 `.local-secrets/*.env` 自动加载
+- 新增 `deepseek` provider 选择模式
+- 在真实本地运行中验证 DeepSeek 计划输出
+
+### 当前状态
+
+- 已完成：本地 DeepSeek 直连计划生成
+- 进行中：仍使用结构化计划生成
+- 未完成：AI SDK tool calling、在线失败恢复、step 上限
+
+### 风险与阻塞
+
+- 当前本地 secrets 依赖开发机文件约定
+
+### 下一步
+
+- 继续把真实模型接到更完整的工具循环

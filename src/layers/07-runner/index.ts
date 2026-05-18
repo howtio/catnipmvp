@@ -1,6 +1,7 @@
 export { createRunnerLayer } from "./wrapper.js";
 export {
   createAiSdkRunnerProvider,
+  createDeepSeekRunnerProvider,
   createHeuristicRunnerProvider,
   createRunnerProviderFromEnv,
 } from "./provider.js";
@@ -8,6 +9,7 @@ export { buildFinalAnswer, summarizeToolOutcome } from "./planner.js";
 export type {
   AiSdkRunnerProviderOptions,
   AvailableTool,
+  DeepSeekRunnerProviderOptions,
   PlannedToolCall,
   RunnerProvider,
   RunnerProviderEnv,
