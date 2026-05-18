@@ -1,5 +1,13 @@
+import { generateObject } from "ai";
+import { z } from "zod";
 import type { EnrichedRunContext } from "../06-skills/index.js";
 import type { PermissionLevel } from "../../shared/types/permission.js";
+
+export interface AvailableTool {
+  name: string;
+  description: string;
+  permission: PermissionLevel;
+}
 
 export interface PlannedToolCall {
   toolName: string;
@@ -14,7 +22,7 @@ export interface RunnerStepPlan {
 }
 
 export interface RunnerProvider {
-  plan(context: EnrichedRunContext): Promise<RunnerStepPlan>;
+  plan(context: EnrichedRunContext, availableTools: AvailableTool[]): Promise<RunnerStepPlan>;
 }
 
 function buildPlannedToolCall(
@@ -108,4 +116,110 @@ export function createHeuristicRunnerProvider(): RunnerProvider {
       };
     },
   };
+}
+
+const aiSdkPlanSchema = z.object({
+  plannedToolCalls: z.array(
+    z.object({
+      toolName: z.string(),
+      args: z.record(z.string(), z.unknown()),
+      reason: z.string(),
+    }),
+  ),
+  finalAnswerPrompt: z.string(),
+});
+
+export interface AiSdkRunnerProviderOptions {
+  model?: string;
+}
+
+export function createAiSdkRunnerProvider(options: AiSdkRunnerProviderOptions = {}): RunnerProvider {
+  const model = options.model ?? process.env.AI_GATEWAY_MODEL ?? "deepseek/deepseek-v3.2";
+
+  return {
+    async plan(context: EnrichedRunContext, availableTools: AvailableTool[]): Promise<RunnerStepPlan> {
+      const toolList = availableTools
+        .map((tool) => `- ${tool.name} (${tool.permission}): ${tool.description}`)
+        .join("\n");
+
+      const prompt = [
+        "You are planning tool usage for a coding agent runtime.",
+        "Return only tool calls that exist in the allowed tool list.",
+        "Prefer the minimum number of tool calls needed to answer the task.",
+        `Task: ${context.task.input}`,
+        `Allowed tools:\n${toolList}`,
+        `Workspace root: ${context.workspace.root}`,
+      ].join("\n\n");
+
+      const { object } = await generateObject({
+        model,
+        schema: aiSdkPlanSchema,
+        prompt,
+      });
+
+      const toolMap = new Map(availableTools.map((tool) => [tool.name, tool]));
+      const plannedToolCalls = object.plannedToolCalls
+        .map((call) => {
+          const matchedTool = toolMap.get(call.toolName);
+          if (!matchedTool) {
+            return undefined;
+          }
+
+          return {
+            toolName: matchedTool.name,
+            permission: matchedTool.permission,
+            args: call.args,
+            reason: call.reason,
+          } satisfies PlannedToolCall;
+        })
+        .filter((call): call is PlannedToolCall => call !== undefined);
+
+      return {
+        plannedToolCalls: plannedToolCalls.length > 0
+          ? plannedToolCalls
+          : [
+              buildPlannedToolCall(
+                "list_files",
+                "low",
+                { path: "." },
+                "Fallback to a safe default because the model returned no valid tool calls.",
+              ),
+            ],
+        finalAnswerPrompt: object.finalAnswerPrompt,
+      };
+    },
+  };
+}
+
+export interface RunnerProviderEnv {
+  AI_GATEWAY_API_KEY?: string;
+  AI_GATEWAY_MODEL?: string;
+  CATNIP_RUNNER_PROVIDER?: string;
+}
+
+export function createRunnerProviderFromEnv(env: RunnerProviderEnv = process.env): RunnerProvider {
+  const mode = env.CATNIP_RUNNER_PROVIDER ?? "auto";
+  const hasGatewayKey = typeof env.AI_GATEWAY_API_KEY === "string" && env.AI_GATEWAY_API_KEY.length > 0;
+  const aiSdkOptions =
+    typeof env.AI_GATEWAY_MODEL === "string" && env.AI_GATEWAY_MODEL.length > 0
+      ? { model: env.AI_GATEWAY_MODEL }
+      : {};
+
+  if (mode === "heuristic") {
+    return createHeuristicRunnerProvider();
+  }
+
+  if (mode === "ai-sdk") {
+    if (!hasGatewayKey) {
+      throw new Error("CATNIP_RUNNER_PROVIDER=ai-sdk requires AI_GATEWAY_API_KEY.");
+    }
+
+    return createAiSdkRunnerProvider(aiSdkOptions);
+  }
+
+  if (hasGatewayKey) {
+    return createAiSdkRunnerProvider(aiSdkOptions);
+  }
+
+  return createHeuristicRunnerProvider();
 }

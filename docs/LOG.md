@@ -1,5 +1,55 @@
 # Construction Log
 
+## 2026-05-18 / Large Step / 接入 AI SDK provider adapter 骨架
+
+### 目标
+
+在不破坏现有 heuristic 默认链路的前提下，把 AI SDK provider adapter 接入 `07-runner`，为后续真实模型计划生成留出落点。
+
+### 本次修改
+
+- 安装 `ai` 与 `zod`
+- 在 Runner provider 中新增 AI SDK structured output 方案
+- 使用 `generateObject` 生成结构化工具计划
+- 增加 `createRunnerProviderFromEnv`
+- 支持 `CATNIP_RUNNER_PROVIDER=auto|heuristic|ai-sdk`
+- 在无 `AI_GATEWAY_API_KEY` 时默认回退到 heuristic provider
+- 更新 `.env.example`，加入 AI Gateway 相关变量
+
+### 修改文件
+
+- package.json
+- package-lock.json
+- .env.example
+- src/bootstrap.ts
+- src/layers/07-runner/index.ts
+- src/layers/07-runner/types.ts
+- src/layers/07-runner/provider.ts
+- src/layers/07-runner/wrapper.ts
+- tests/runner.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/07-runner.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，11 个测试全部通过
+- `node dist/src/main.js "write file then patch file and shell status"`：通过
+- 默认无 `AI_GATEWAY_API_KEY` 时，provider 自动回退到 heuristic
+
+### 风险
+
+- 当前 AI SDK provider 只负责结构化计划生成，尚未接入工具调用式模型循环
+- 仓库里没有可用于真实调用的 `AI_GATEWAY_API_KEY`，所以还未做在线集成验证
+- 目前仍未直连 DeepSeek 平台，走的是 AI Gateway 模型字符串方案
+
+### 下一步
+
+- 接入 AI SDK tool calling 或更完整的 step 控制
+- 在有真实 key 的环境下验证 AI SDK provider 计划输出
+
 ## 2026-05-18 / Large Step / Runner 多步计划与 provider adapter 骨架
 
 ### 目标

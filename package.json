@@ -11,5 +11,9 @@
   "devDependencies": {
     "@types/node": "^24.10.1",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "ai": "^6.0.184",
+    "zod": "^4.4.3"
   }
 }

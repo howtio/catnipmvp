@@ -8,7 +8,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
     async run(context: EnrichedRunContext) {
       const runId = context.runId;
       const availableTools = deps.toolRegistry.listTools();
-      const plan = await deps.provider.plan(context);
+      const plan = await deps.provider.plan(context, availableTools);
       if (plan.plannedToolCalls.length === 0) {
         deps.eventbus.publish({
           type: "agent.step.finished",

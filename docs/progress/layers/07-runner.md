@@ -137,3 +137,33 @@
 ### 下一步
 
 - 在后续阶段接入真实 provider adapter 或完善 step 控制
+
+## 2026-05-18 / Large Step / 接入 AI SDK provider 选择骨架
+
+### 当前目标
+
+让 Runner 的 provider adapter 不再只有 heuristic，本地环境具备切换到 AI SDK provider 的能力。
+
+### 本次完成
+
+- 安装 `ai`
+- 安装 `zod`
+- 新增 AI SDK provider 实现
+- 用 `generateObject` 生成结构化工具计划
+- 新增环境驱动的 provider 选择逻辑
+- 缺失 key 时自动回退到 heuristic
+
+### 当前状态
+
+- 已完成：AI SDK provider adapter 骨架
+- 进行中：默认仍走 heuristic
+- 未完成：真实在线调用验证、AI SDK tool calling、模型 step 控制
+
+### 风险与阻塞
+
+- 当前环境没有 AI Gateway key，无法做真实模型验证
+
+### 下一步
+
+- 在有 key 的环境下验证 AI SDK 计划输出
+- 或继续把 Runner 接到更完整的模型循环
