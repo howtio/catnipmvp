@@ -1,5 +1,53 @@
 # Construction Log
 
+## 2026-05-18 / Phase 1 / 打通 Gateway Queue Worker 最小任务链路
+
+### 目标
+
+在不进入 AI SDK 和真实工具执行阶段的前提下，完成可运行的 CLI 任务创建、队列状态维护和单 Worker 消费链路。
+
+### 本次修改
+
+- Gateway 改为读取 CLI 输入并创建标准 `RunTask`
+- Queue 增加任务快照、完成等待和任务通知能力
+- Worker 改为通知式消费任务，并维护 `running / done / failed` 状态流转
+- 为 `RunTask` 增加开始时间、结束时间和错误信息字段
+- 修正空轮询导致的 CLI 退出行为，改为按任务到达唤醒消费
+
+### 修改文件
+
+- src/shared/types/runTask.ts
+- src/layers/01-gateway/types.ts
+- src/layers/01-gateway/wrapper.ts
+- src/layers/02-queue/index.ts
+- src/layers/02-queue/types.ts
+- src/layers/02-queue/wrapper.ts
+- src/layers/03-worker/types.ts
+- src/layers/03-worker/wrapper.ts
+- src/bootstrap.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+- docs/progress/layers/02-queue.md
+- docs/progress/layers/03-worker.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `node dist/src/main.js "phase1 smoke test"`：通过
+
+### 风险
+
+- Worker 当前仍为单实例无限消费循环，尚未加入关闭机制
+- Queue 仍为内存实现，进程退出后任务状态不会持久化
+- Harness / Context / Skills 仍是占位串联，尚未产出完整 run 报告
+
+### 下一步
+
+- 进入 Phase 2，细化 Harness 生命周期、Context 文档加载和 Skills 注入
+- 继续保持每阶段完成后做构建验证和日志回写
+
 ## 2026-05-18 / Phase 0 / 文档与目录骨架初始化
 
 ### 目标
@@ -209,3 +257,194 @@
 
 - 继续强化主文档中的仓库专属测试与回滚策略
 - 或进入 TypeScript 基础骨架阶段
+
+## 2026-05-18 / Phase 0 / 强化安全、调试、上传、回滚与实时日志标准
+
+### 目标
+
+把主文档强化成后续可长期接力使用的总施工标准，补齐安全、调试、上传、回滚、实时日志规则，并检查不稳妥点。
+
+### 本次修改
+
+- 补充 DeepSeek API Key 安全规则
+- 明确真实密钥不能写入仓库文档
+- 明确用户在会话中暴露过的密钥应视为已暴露并建议轮换
+- 补充分阶段测试标准和测试失败处理标准
+- 补充调试标准
+- 补充上传标准
+- 补充回滚标准
+- 强化实时日志要求
+- 修正文档中“自动 push”与“直推 main”的不稳妥表达
+
+### 修改文件
+
+- CODEX_MASTER_REQUIREMENTS.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+
+### 验证结果
+
+- 主文档规则增强：成功
+- 代码实现：未执行
+- typecheck：未执行
+- 测试：未执行
+
+### 风险
+
+- DeepSeek 的实际命令、SDK 形式和运行脚本仍未落地
+- 当前测试命令仍未最终固化到 `package.json`
+- 文档规则已较完整，但仍需在代码阶段持续校准
+
+### 下一步
+
+- 开始补 `.env.example` 和 `.gitignore` 的安全占位规则
+- 或进入 TypeScript 基础骨架阶段
+
+## 2026-05-18 / Phase 0 / 润色子目录文档
+
+### 目标
+
+把各子目录下仍偏占位的文档润色为可执行说明，统一与总施工文档的职责边界、日志要求和后续施工口径。
+
+### 本次修改
+
+- 润色十层 `README.md`
+- 润色 `docs/progress/README.md`
+- 润色 `skills/coding/SKILL.md` 与 `skills/testing/SKILL.md`
+- 补充各层进度日志中的阻塞点与边界说明
+
+### 修改文件
+
+- src/layers/01-gateway/README.md
+- src/layers/02-queue/README.md
+- src/layers/03-worker/README.md
+- src/layers/04-harness/README.md
+- src/layers/05-context/README.md
+- src/layers/06-skills/README.md
+- src/layers/07-runner/README.md
+- src/layers/08-eventbus/README.md
+- src/layers/09-tool-registry/README.md
+- src/layers/10-executor/README.md
+- docs/progress/README.md
+- docs/progress/layers/01-gateway.md
+- docs/progress/layers/02-queue.md
+- docs/progress/layers/03-worker.md
+- docs/progress/layers/04-harness.md
+- docs/progress/layers/05-context.md
+- docs/progress/layers/06-skills.md
+- docs/progress/layers/07-runner.md
+- docs/progress/layers/08-eventbus.md
+- docs/progress/layers/09-tool-registry.md
+- docs/progress/layers/10-executor.md
+- skills/coding/SKILL.md
+- skills/testing/SKILL.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+
+### 验证结果
+
+- 文档一致性抽查：成功
+- 代码实现：未执行
+- typecheck：未执行
+- 测试：未执行
+
+### 风险
+
+- 当前仍有少量总文档中的“下一步”内容需要后续同步更新
+- 文档已经更完整，但真实脚本和命令仍需在代码阶段落地
+
+### 下一步
+
+- 修正文档里仍过时的“当前下一步”描述
+- 或进入 TypeScript 基础骨架阶段
+
+## 2026-05-18 / Phase 0 / 建立 TypeScript 与十层空代码骨架
+
+### 目标
+
+在不提前实现复杂业务逻辑的前提下，完成 TypeScript 基础配置、十层对外入口骨架、共享基础模块，并通过静态检查。
+
+### 本次修改
+
+- 创建 `package.json`、`tsconfig.json`、`.gitignore`、`.env.example`
+- 创建 `src/main.ts` 和 `src/bootstrap.ts`
+- 为十层分别创建 `wrapper.ts`、`types.ts`、`index.ts`
+- 创建 `src/shared/types`、`src/shared/logger`、`src/shared/errors`、`src/shared/utils` 基础文件
+- 修正主文档中过时的“当前下一步”、分支策略、测试命令描述
+- 安装 TypeScript 与 Node 类型依赖
+
+### 修改文件
+
+- package.json
+- package-lock.json
+- tsconfig.json
+- .gitignore
+- .env.example
+- src/main.ts
+- src/bootstrap.ts
+- src/layers/01-gateway/index.ts
+- src/layers/01-gateway/types.ts
+- src/layers/01-gateway/wrapper.ts
+- src/layers/02-queue/index.ts
+- src/layers/02-queue/types.ts
+- src/layers/02-queue/wrapper.ts
+- src/layers/03-worker/index.ts
+- src/layers/03-worker/types.ts
+- src/layers/03-worker/wrapper.ts
+- src/layers/04-harness/index.ts
+- src/layers/04-harness/types.ts
+- src/layers/04-harness/wrapper.ts
+- src/layers/05-context/index.ts
+- src/layers/05-context/types.ts
+- src/layers/05-context/wrapper.ts
+- src/layers/06-skills/index.ts
+- src/layers/06-skills/types.ts
+- src/layers/06-skills/wrapper.ts
+- src/layers/07-runner/index.ts
+- src/layers/07-runner/types.ts
+- src/layers/07-runner/wrapper.ts
+- src/layers/08-eventbus/index.ts
+- src/layers/08-eventbus/types.ts
+- src/layers/08-eventbus/wrapper.ts
+- src/layers/09-tool-registry/index.ts
+- src/layers/09-tool-registry/types.ts
+- src/layers/09-tool-registry/wrapper.ts
+- src/layers/10-executor/index.ts
+- src/layers/10-executor/types.ts
+- src/layers/10-executor/wrapper.ts
+- src/shared/types/runTask.ts
+- src/shared/types/permission.ts
+- src/shared/types/tool.ts
+- src/shared/types/event.ts
+- src/shared/types/result.ts
+- src/shared/logger/jsonlLogger.ts
+- src/shared/logger/consoleLogger.ts
+- src/shared/logger/logEvent.ts
+- src/shared/errors/CatnipError.ts
+- src/shared/errors/PolicyError.ts
+- src/shared/errors/ToolError.ts
+- src/shared/errors/TimeoutError.ts
+- src/shared/utils/sleep.ts
+- src/shared/utils/createId.ts
+- src/shared/utils/safeJson.ts
+- src/shared/utils/assertNever.ts
+- CODEX_MASTER_REQUIREMENTS.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+
+### 验证结果
+
+- `npm install`：成功
+- `npm run typecheck`：成功
+- `npm run build`：成功
+
+### 风险
+
+- 目前十层实现仍是占位逻辑，不能视为业务完成
+- `npm test` 仍未定义，测试框架尚未建立
+- `main` 目前仍承载骨架阶段施工，后续代码功能开发更适合走功能分支
+
+### 下一步
+
+- 进入 Phase 1，先做 Queue 和 Worker 的最小可运行实现
+- 再逐层补 Harness、Context、Skills 的真实骨架逻辑
