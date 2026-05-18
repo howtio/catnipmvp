@@ -8,3 +8,10 @@ export interface ToolDefinition {
   argShape: "object";
   stage: "skeleton" | "planned" | "active";
 }
+
+export interface ToolArgSchemaField {
+  name: string;
+  type: "string" | "boolean" | "number";
+  required: boolean;
+  description: string;
+}

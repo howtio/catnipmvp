@@ -4,7 +4,7 @@
 
 ### 进行中
 
-- 推进 Phase 5 的最小工具实现与 guard 细化
+- 推进 Phase 6 的日志、报告与测试补强
 
 ### 已完成
 
@@ -36,12 +36,14 @@
 - 完成 Phase 2 最小链路：Harness run 生命周期、Context 文档装载、Skills 技能注入
 - 完成 Phase 3 最小链路：Runner 工具请求、EventBus 等待结果、Executor 模拟返回
 - 完成 Phase 4 最小骨架：Tool Registry 工具元数据扩展、Executor guard 准入检查
+- 完成 Phase 5 第一批最小只读工具：`list_files`、`read_file`、`git_diff`
 - `npm run typecheck` 通过
 - `npm run build` 通过
 - `node dist/src/main.js "phase1 smoke test"` 冒烟通过
 - `node dist/src/main.js "phase2 context and skills smoke test"` 冒烟通过
 - `node dist/src/main.js "phase3 tool event smoke test"` 冒烟通过
 - `node dist/src/main.js "phase4 guard skeleton smoke test"` 冒烟通过
+- `node dist/src/main.js "phase5 readonly tool smoke test"` 冒烟通过
 
 ### 未开始
 

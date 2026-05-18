@@ -8,7 +8,7 @@ const DEFAULT_TOOLS: ToolDefinition[] = [
     permission: "low",
     category: "filesystem",
     argShape: "object",
-    stage: "skeleton",
+    stage: "active",
   },
   {
     name: "read_file",
@@ -16,7 +16,7 @@ const DEFAULT_TOOLS: ToolDefinition[] = [
     permission: "low",
     category: "filesystem",
     argShape: "object",
-    stage: "skeleton",
+    stage: "active",
   },
   {
     name: "write_file",
@@ -48,7 +48,7 @@ const DEFAULT_TOOLS: ToolDefinition[] = [
     permission: "medium",
     category: "git",
     argShape: "object",
-    stage: "planned",
+    stage: "active",
   },
 ];
 

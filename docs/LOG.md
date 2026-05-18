@@ -1,5 +1,49 @@
 # Construction Log
 
+## 2026-05-18 / Phase 5 / 落地第一批只读工具
+
+### 目标
+
+先实现最安全的最小工具集，把 `list_files`、`read_file`、`git_diff` 从定义推进到真实执行，同时把 guard 补到基础路径边界。
+
+### 本次修改
+
+- 将 `list_files`、`read_file`、`git_diff` 标记为 `active`
+- 新增 Executor 工具实现文件 `tools.ts`
+- 实现 `list_files` 目录读取
+- 实现 `read_file` 文件读取
+- 实现 `git_diff` 只读 git diff 获取
+- 在 guard 中增加最小路径边界检查，防止 `read_file` 和 `list_files` 越过 workspace
+
+### 修改文件
+
+- src/shared/types/tool.ts
+- src/layers/09-tool-registry/wrapper.ts
+- src/layers/10-executor/guard.ts
+- src/layers/10-executor/tools.ts
+- src/layers/10-executor/wrapper.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/09-tool-registry.md
+- docs/progress/layers/10-executor.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `node dist/src/main.js "phase5 readonly tool smoke test"`：通过
+
+### 风险
+
+- `write_file`、`patch_file`、`shell_exec` 仍未落地
+- Runner 当前仍只做固定工具选择，尚未根据任务内容路由到具体工具
+- `git_diff` 已是只读执行，但 shell 类命令 guard 还未实现
+
+### 下一步
+
+- 进入 Phase 6，补日志、最终报告输出和测试框架
+- 或在需要时继续补写入类工具与更细的 guard
+
 ## 2026-05-18 / Phase 4 / 建立 Tool Registry 与 Executor guard 骨架
 
 ### 目标

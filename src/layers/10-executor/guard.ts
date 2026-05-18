@@ -1,4 +1,5 @@
 import { PolicyError } from "../../shared/errors/PolicyError.js";
+import { resolve } from "node:path";
 import type { PermissionLevel } from "../../shared/types/permission.js";
 import type { ToolDefinition } from "../../shared/types/tool.js";
 import type { GuardResult, ToolCallRequest } from "./types.js";
@@ -30,6 +31,36 @@ function ensureArgsShape(args: unknown): void {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function ensurePathInsideWorkspace(workspaceRoot: string, candidatePath: unknown): void {
+  if (typeof candidatePath !== "string" || candidatePath.length === 0) {
+    throw new PolicyError("Tool call path must be a non-empty string.");
+  }
+
+  const resolvedPath = resolve(workspaceRoot, candidatePath);
+  const normalizedRoot = resolve(workspaceRoot);
+  if (resolvedPath !== normalizedRoot && !resolvedPath.startsWith(`${normalizedRoot}/`)) {
+    throw new PolicyError("Tool call path is outside the active workspace.");
+  }
+}
+
+function ensureFilesystemArgs(toolName: string, args: unknown, workspaceRoot: string): void {
+  if (!isRecord(args)) {
+    throw new PolicyError("Filesystem tool args must be a plain object.");
+  }
+
+  if (toolName === "read_file") {
+    ensurePathInsideWorkspace(workspaceRoot, args.path);
+  }
+
+  if (toolName === "list_files" && args.path !== undefined) {
+    ensurePathInsideWorkspace(workspaceRoot, args.path);
+  }
+}
+
 function ensurePermissionMatches(expected: PermissionLevel, actual: unknown): void {
   if (!isPermissionLevel(actual)) {
     throw new PolicyError("Tool call permission is invalid.");
@@ -53,6 +84,7 @@ export function guardToolCall(
     ensurePermissionMatches(tool.permission, request.permission);
     ensureArgsShape(request.args);
     ensureWorkspaceRoot(deps.workspaceRoot, request.workspaceRoot);
+    ensureFilesystemArgs(tool.name, request.args, deps.workspaceRoot);
 
     return {
       ok: true,
