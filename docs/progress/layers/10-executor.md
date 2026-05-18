@@ -51,3 +51,30 @@
 ### 下一步
 
 - 在 Phase 4 中补齐 guard 与执行骨架
+
+## 2026-05-18 / Phase 3 / 建立最小工具请求监听骨架
+
+### 当前目标
+
+让 Executor 能消费 Runner 通过 EventBus 发出的工具请求事件。
+
+### 本次完成
+
+- 监听 `tool.call.requested`
+- 按工具名从 Tool Registry 解析工具
+- 对未知工具返回 `tool.call.failed`
+- 对已知工具返回模拟 `tool.call.result`
+
+### 当前状态
+
+- 已完成：最小事件消费与返回骨架
+- 进行中：仅返回模拟结果
+- 未完成：真实 guard、审计日志、真实副作用执行
+
+### 风险与阻塞
+
+- 当前没有路径、命令、权限 guard
+
+### 下一步
+
+- 在 Phase 4 中补齐 guard 结构和更完整的执行边界

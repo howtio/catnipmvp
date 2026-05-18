@@ -1,5 +1,55 @@
 # Construction Log
 
+## 2026-05-18 / Phase 3 / 打通最小工具事件链路
+
+### 目标
+
+让 Runner、EventBus、Tool Registry、Executor 不再只是独立骨架，而是形成一条最小可观察的工具调用事件闭环。
+
+### 本次修改
+
+- EventBus 增加 `subscribe` 和 `waitForToolResult`
+- Tool Registry 增加 `getTool` 解析接口
+- Runner 改为发起 `tool.call.requested` 并等待工具结果
+- Executor 监听工具请求并返回模拟 `tool.call.result / tool.call.failed`
+- 修正工具结果监听的时序问题，先挂监听再发请求
+
+### 修改文件
+
+- src/bootstrap.ts
+- src/layers/07-runner/types.ts
+- src/layers/07-runner/wrapper.ts
+- src/layers/08-eventbus/index.ts
+- src/layers/08-eventbus/types.ts
+- src/layers/08-eventbus/wrapper.ts
+- src/layers/09-tool-registry/types.ts
+- src/layers/09-tool-registry/wrapper.ts
+- src/layers/10-executor/types.ts
+- src/layers/10-executor/wrapper.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/07-runner.md
+- docs/progress/layers/08-eventbus.md
+- docs/progress/layers/09-tool-registry.md
+- docs/progress/layers/10-executor.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `node dist/src/main.js "phase3 tool event smoke test"`：通过
+
+### 风险
+
+- 当前工具结果仍是模拟数据，尚未进入真实副作用执行
+- EventBus 还没有超时和取消机制
+- Runner 目前只做单次最小工具请求，尚未形成完整 ReAct Loop
+
+### 下一步
+
+- 进入 Phase 4，细化工具定义、权限边界和 Executor guard 骨架
+- 继续保持每阶段完成后验证、写日志、提交推送
+
 ## 2026-05-18 / Phase 2 / 打通 Harness Context Skills 最小运行编排
 
 ### 目标

@@ -1,2 +1,7 @@
 export { createEventBusLayer } from "./wrapper.js";
-export type { EventBusLayerApi } from "./types.js";
+export type {
+  EventBusEvent,
+  EventBusLayerApi,
+  ToolCallFailedEvent,
+  ToolCallResultEvent,
+} from "./types.js";

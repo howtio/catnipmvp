@@ -19,5 +19,8 @@ export function createToolRegistryLayer(): ToolRegistryLayerApi {
     listTools(): ToolDefinition[] {
       return DEFAULT_TOOLS;
     },
+    getTool(name: string): ToolDefinition | undefined {
+      return DEFAULT_TOOLS.find((tool) => tool.name === name);
+    },
   };
 }

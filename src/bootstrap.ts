@@ -18,6 +18,7 @@ export function bootstrapCatnipAgent() {
   });
   const runner = createRunnerLayer({
     eventbus,
+    toolRegistry,
   });
   const skills = createSkillsLayer();
   const context = createContextLayer();
