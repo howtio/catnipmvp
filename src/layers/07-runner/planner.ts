@@ -9,6 +9,12 @@ export interface ToolExecutionSummary {
   error?: string;
 }
 
+export interface RunnerRunResult {
+  stepsUsed: number;
+  finalAnswer: string;
+  toolSummaries: ToolExecutionSummary[];
+}
+
 export function summarizeToolOutcome(
   plannedCall: PlannedToolCall,
   outcome: ToolCallResultEvent | ToolCallFailedEvent,

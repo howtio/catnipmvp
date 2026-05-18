@@ -1,8 +1,10 @@
 import { createDeepSeek } from "@ai-sdk/deepseek";
-import { generateObject } from "ai";
+import { generateObject, generateText, stepCountIs, tool as defineTool } from "ai";
 import { z } from "zod";
 import type { EnrichedRunContext } from "../06-skills/index.js";
 import type { PermissionLevel } from "../../shared/types/permission.js";
+import { buildFinalAnswer } from "./planner.js";
+import type { RunnerRunResult, ToolExecutionSummary } from "./planner.js";
 
 export interface AvailableTool {
   name: string;
@@ -24,6 +26,14 @@ export interface RunnerStepPlan {
 
 export interface RunnerProvider {
   plan(context: EnrichedRunContext, availableTools: AvailableTool[]): Promise<RunnerStepPlan>;
+  runWithTools?(
+    context: EnrichedRunContext,
+    availableTools: AvailableTool[],
+    helpers: {
+      executeToolCall(plannedCall: PlannedToolCall): Promise<ToolExecutionSummary>;
+      onStepFinish(event: { stepNumber: number; toolCalls: number; toolResults: number; text: string }): void;
+    },
+  ): Promise<RunnerRunResult>;
 }
 
 function buildPlannedToolCall(
@@ -108,6 +118,15 @@ function normalizePlannedCalls(
       } satisfies PlannedToolCall;
     })
     .filter((call): call is PlannedToolCall => call !== undefined);
+}
+
+function summarizeAiSdkToolResult(toolResult: { toolName: string; output: unknown }): ToolExecutionSummary {
+  return {
+    toolName: toolResult.toolName,
+    ok: true,
+    reason: "Model-selected tool call.",
+    result: toolResult.output,
+  };
 }
 
 export function createHeuristicRunnerProvider(): RunnerProvider {
@@ -263,6 +282,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
       : {}),
   });
   const model = options.model ?? "deepseek-chat";
+  const toolMap = new Map<string, AvailableTool>();
 
   return {
     async plan(context: EnrichedRunContext, availableTools: AvailableTool[]): Promise<RunnerStepPlan> {
@@ -299,6 +319,189 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
               ),
             ],
         finalAnswerPrompt: object.finalAnswerPrompt,
+      };
+    },
+    async runWithTools(context: EnrichedRunContext, availableTools: AvailableTool[], helpers) {
+      toolMap.clear();
+      const toolSummaries: ToolExecutionSummary[] = [];
+      for (const tool of availableTools) {
+        toolMap.set(tool.name, tool);
+      }
+
+      const result = await generateText({
+        model: provider(model),
+        system: [
+          context.systemPrompt,
+          "Use the available tools when they materially help solve the task.",
+          "Do not invent tool names or parameters outside the schemas.",
+        ].join("\n\n"),
+        prompt: context.task.input,
+        stopWhen: stepCountIs(5),
+        tools: {
+          list_files: defineTool({
+            description: "List files inside the workspace.",
+            inputSchema: z.object({
+              path: z.string().default(".").describe("Relative path inside the workspace."),
+            }),
+            execute: async (input) => {
+              const availableTool = toolMap.get("list_files");
+              if (!availableTool) {
+                throw new Error("Tool registry is missing list_files.");
+              }
+              const summary = await helpers.executeToolCall({
+                toolName: "list_files",
+                permission: availableTool.permission,
+                args: normalizePlannedToolArgs("list_files", input),
+                reason: "Model-selected tool call.",
+              });
+              toolSummaries.push(summary);
+              if (!summary.ok) {
+                throw new Error(summary.error ?? "list_files failed");
+              }
+              return summary.result;
+            },
+          }),
+          read_file: defineTool({
+            description: "Read a file inside the workspace.",
+            inputSchema: z.object({
+              path: z.string().describe("Relative path inside the workspace."),
+            }),
+            execute: async (input) => {
+              const availableTool = toolMap.get("read_file");
+              if (!availableTool) {
+                throw new Error("Tool registry is missing read_file.");
+              }
+              const summary = await helpers.executeToolCall({
+                toolName: "read_file",
+                permission: availableTool.permission,
+                args: normalizePlannedToolArgs("read_file", input),
+                reason: "Model-selected tool call.",
+              });
+              toolSummaries.push(summary);
+              if (!summary.ok) {
+                throw new Error(summary.error ?? "read_file failed");
+              }
+              return summary.result;
+            },
+          }),
+          write_file: defineTool({
+            description: "Write a file inside the workspace.",
+            inputSchema: z.object({
+              path: z.string().describe("Relative path inside the workspace."),
+              content: z.string().describe("UTF-8 text content to write."),
+            }),
+            execute: async (input) => {
+              const availableTool = toolMap.get("write_file");
+              if (!availableTool) {
+                throw new Error("Tool registry is missing write_file.");
+              }
+              const summary = await helpers.executeToolCall({
+                toolName: "write_file",
+                permission: availableTool.permission,
+                args: normalizePlannedToolArgs("write_file", input),
+                reason: "Model-selected tool call.",
+              });
+              toolSummaries.push(summary);
+              if (!summary.ok) {
+                throw new Error(summary.error ?? "write_file failed");
+              }
+              return summary.result;
+            },
+          }),
+          patch_file: defineTool({
+            description: "Replace text inside a workspace file.",
+            inputSchema: z.object({
+              path: z.string().describe("Relative path inside the workspace."),
+              search: z.string().describe("Text to find."),
+              replace: z.string().describe("Replacement text."),
+            }),
+            execute: async (input) => {
+              const availableTool = toolMap.get("patch_file");
+              if (!availableTool) {
+                throw new Error("Tool registry is missing patch_file.");
+              }
+              const summary = await helpers.executeToolCall({
+                toolName: "patch_file",
+                permission: availableTool.permission,
+                args: normalizePlannedToolArgs("patch_file", input),
+                reason: "Model-selected tool call.",
+              });
+              toolSummaries.push(summary);
+              if (!summary.ok) {
+                throw new Error(summary.error ?? "patch_file failed");
+              }
+              return summary.result;
+            },
+          }),
+          shell_exec: defineTool({
+            description: "Run a whitelisted shell command inside the workspace.",
+            inputSchema: z.object({
+              command: z.string().describe("Whitelisted command name."),
+              argv: z.array(z.string()).default([]).describe("Argument array."),
+            }),
+            execute: async (input) => {
+              const availableTool = toolMap.get("shell_exec");
+              if (!availableTool) {
+                throw new Error("Tool registry is missing shell_exec.");
+              }
+              const summary = await helpers.executeToolCall({
+                toolName: "shell_exec",
+                permission: availableTool.permission,
+                args: normalizePlannedToolArgs("shell_exec", input),
+                reason: "Model-selected tool call.",
+              });
+              toolSummaries.push(summary);
+              if (!summary.ok) {
+                throw new Error(summary.error ?? "shell_exec failed");
+              }
+              return summary.result;
+            },
+          }),
+          git_diff: defineTool({
+            description: "Inspect the current git diff.",
+            inputSchema: z.object({}),
+            execute: async () => {
+              const availableTool = toolMap.get("git_diff");
+              if (!availableTool) {
+                throw new Error("Tool registry is missing git_diff.");
+              }
+              const summary = await helpers.executeToolCall({
+                toolName: "git_diff",
+                permission: availableTool.permission,
+                args: {},
+                reason: "Model-selected tool call.",
+              });
+              toolSummaries.push(summary);
+              if (!summary.ok) {
+                throw new Error(summary.error ?? "git_diff failed");
+              }
+              return summary.result;
+            },
+          }),
+        },
+        onStepFinish(event) {
+          helpers.onStepFinish({
+            stepNumber: event.stepNumber,
+            toolCalls: event.toolCalls.length,
+            toolResults: event.toolResults.length,
+            text: event.text,
+          });
+        },
+      });
+
+      const finalAnswer = result.text && result.text.trim().length > 0
+        ? result.text
+        : buildFinalAnswer(toolSummaries.length > 0 ? toolSummaries : result.toolResults.map((toolResult) =>
+            summarizeAiSdkToolResult({
+              toolName: toolResult.toolName,
+              output: toolResult.output,
+            }),
+          ));
+
+      return {
+        stepsUsed: result.steps.length,
+        finalAnswer,
+        toolSummaries,
       };
     },
   };

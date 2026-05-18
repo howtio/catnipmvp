@@ -194,3 +194,31 @@
 ### 下一步
 
 - 继续把真实模型接到更完整的工具循环
+
+## 2026-05-19 / Large Step / 接通 AI SDK tool calling
+
+### 当前目标
+
+让 DeepSeek provider 不只是返回工具计划，而是在 Runner 内直接通过 AI SDK tools 驱动工具调用循环。
+
+### 本次完成
+
+- 为 provider 增加 `runWithTools`
+- 使用 `generateText`
+- 使用 `tools`
+- 使用 `stopWhen: stepCountIs(5)`
+- 通过 Runner 的 `executeToolCall` 间接调用 EventBus / Executor
+
+### 当前状态
+
+- 已完成：真实模型 tool calling 基础链路
+- 进行中：step 控制仍较粗
+- 未完成：统一超时、失败恢复、更多模型兼容验证
+
+### 风险与阻塞
+
+- 在线模型在复杂任务下可能耗时较长
+
+### 下一步
+
+- 在后续阶段补 step 上限、超时和失败恢复策略

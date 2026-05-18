@@ -4,7 +4,7 @@
 
 ### 进行中
 
-- 评估 AI SDK tool calling 与真实模型 step 控制的接入顺序
+- 评估 step 上限、超时与失败恢复的统一策略
 
 ### 已完成
 
@@ -42,6 +42,7 @@
 - 完成 Runner 扩展：provider adapter 骨架、多步工具计划、最终回答摘要
 - 完成 AI SDK provider adapter 骨架与环境驱动选择
 - 完成 DeepSeek 直连 provider、本地 secrets 自动加载与在线计划验证
+- 完成 DeepSeek 在 Runner 内通过 AI SDK tool calling 直连 EventBus
 - `npm run typecheck` 通过
 - `npm run build` 通过
 - `npm test` 通过
@@ -57,13 +58,14 @@
 - `node dist/src/main.js "write file then patch file and shell status"` 多步冒烟通过
 - `node dist/src/main.js "write file then patch file and shell status"` 在无 key 默认 heuristic 下通过
 - `node dist/src/main.js "readme and git diff"` 在本地 DeepSeek provider 下通过
+- `node dist/src/main.js "readme and git diff"` 在本地 DeepSeek AI SDK tool calling 下通过
 
 ### 未开始
 
 - Runner provider 抽象
 - DeepSeek 接入
 - GitHub 仓库实际接入
-- AI SDK tool calling 与真实模型计划生成
+- step 上限、超时、失败恢复与重试
 
 ### 备注
 

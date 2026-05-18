@@ -1,5 +1,50 @@
 # Construction Log
 
+## 2026-05-19 / Large Step / 接通 DeepSeek 的 AI SDK tool calling
+
+### 目标
+
+把真实模型链路从“只生成结构化计划”继续推进到“在 Runner 内直接通过 AI SDK tools 发起工具调用”，同时保持实际工具执行仍然只经 EventBus 和 Executor。
+
+### 本次修改
+
+- 为 `RunnerProvider` 增加可选 `runWithTools`
+- `createDeepSeekRunnerProvider` 改为支持 AI SDK `generateText + tools + stopWhen`
+- 在 Runner wrapper 中抽取 `executeToolCall`，作为 provider-driven loop 的统一执行入口
+- 新增模型工具调用参数归一化
+- 修正 AI SDK tool-calling 分支的 `toolSummaryCount`
+- 验证真实 DeepSeek 在 tool calling 模式下成功跑通
+
+### 修改文件
+
+- src/layers/07-runner/index.ts
+- src/layers/07-runner/planner.ts
+- src/layers/07-runner/provider.ts
+- src/layers/07-runner/types.ts
+- src/layers/07-runner/wrapper.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/07-runner.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，12 个测试全部通过
+- `node dist/src/main.js "readme and git diff"`：通过
+- `logs/catnip.jsonl`：确认 DeepSeek 通过 AI SDK tool calling 发起工具调用并产出 `run.report`
+
+### 风险
+
+- 当前真实模型在复杂任务下仍可能花较长时间才结束，需要补超时和步数限制策略
+- tool schemas 仍是最小版，复杂 patch/shell 输入约束还不够细
+- DeepSeek 在线行为稳定性还需要更多真实任务验证
+
+### 下一步
+
+- 统一 Runner 的 step 上限、超时和失败恢复
+- 或继续细化 tool schemas 与 guard repair 逻辑
+
 ## 2026-05-18 / Large Step / 本地 secrets 与 DeepSeek 直连 provider
 
 ### 目标
