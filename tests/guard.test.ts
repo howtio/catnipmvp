@@ -79,3 +79,43 @@ test("guardToolCall accepts read_file paths inside workspace", () => {
 
   assert.equal(result.ok, true);
 });
+
+test("guardToolCall rejects non-whitelisted shell_exec commands", () => {
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "catnip-guard-"));
+  const result = guardToolCall(
+    {
+      type: "tool.call.requested",
+      runId: "run_test",
+      toolCallId: "toolcall_test",
+      toolName: "shell_exec",
+      permission: "medium",
+      workspaceRoot,
+      args: {
+        command: "rm",
+        argv: ["-rf", "."],
+      },
+    },
+    {
+      workspaceRoot,
+      toolRegistry: {
+        getTool(name) {
+          return name === "shell_exec"
+            ? {
+                name: "shell_exec",
+                description: "Shell exec.",
+                permission: "medium",
+                category: "shell",
+                argShape: "object",
+                stage: "active",
+              }
+            : undefined;
+        },
+      },
+    },
+  );
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.match(result.error, /not allowed/);
+  }
+});

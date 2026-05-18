@@ -24,7 +24,7 @@ const DEFAULT_TOOLS: ToolDefinition[] = [
     permission: "medium",
     category: "filesystem",
     argShape: "object",
-    stage: "planned",
+    stage: "active",
   },
   {
     name: "patch_file",
@@ -32,7 +32,7 @@ const DEFAULT_TOOLS: ToolDefinition[] = [
     permission: "medium",
     category: "filesystem",
     argShape: "object",
-    stage: "planned",
+    stage: "active",
   },
   {
     name: "shell_exec",
@@ -40,7 +40,7 @@ const DEFAULT_TOOLS: ToolDefinition[] = [
     permission: "medium",
     category: "shell",
     argShape: "object",
-    stage: "planned",
+    stage: "active",
   },
   {
     name: "git_diff",

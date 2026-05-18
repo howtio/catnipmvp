@@ -4,6 +4,18 @@ import type { PermissionLevel } from "../../shared/types/permission.js";
 import type { ToolDefinition } from "../../shared/types/tool.js";
 import type { GuardResult, ToolCallRequest } from "./types.js";
 
+const ALLOWED_SHELL_COMMANDS = [
+  ["npm", "test"],
+  ["npm", "run", "test"],
+  ["npm", "run", "build"],
+  ["pnpm", "test"],
+  ["pnpm", "build"],
+  ["git", "status"],
+  ["git", "diff"],
+  ["ls"],
+  ["cat"],
+] as const;
+
 interface GuardToolCallDeps {
   workspaceRoot: string;
   toolRegistry: {
@@ -52,12 +64,57 @@ function ensureFilesystemArgs(toolName: string, args: unknown, workspaceRoot: st
     throw new PolicyError("Filesystem tool args must be a plain object.");
   }
 
-  if (toolName === "read_file") {
+  if (toolName === "read_file" || toolName === "write_file" || toolName === "patch_file") {
     ensurePathInsideWorkspace(workspaceRoot, args.path);
   }
 
   if (toolName === "list_files" && args.path !== undefined) {
     ensurePathInsideWorkspace(workspaceRoot, args.path);
+  }
+}
+
+function ensureStringArray(value: unknown, fieldName: string): string[] {
+  if (value === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new PolicyError(`${fieldName} must be an array of strings.`);
+  }
+
+  return value;
+}
+
+function ensureShellArgs(args: unknown): void {
+  if (!isRecord(args)) {
+    throw new PolicyError("shell_exec args must be a plain object.");
+  }
+
+  if (typeof args.command !== "string" || args.command.length === 0) {
+    throw new PolicyError("shell_exec requires a command string.");
+  }
+
+  const argv = ensureStringArray(args.argv, "shell_exec argv");
+  const requested = [args.command, ...argv];
+  const allowed = ALLOWED_SHELL_COMMANDS.some(
+    (candidate) =>
+      candidate.length === requested.length &&
+      candidate.every((segment, index) => requested[index] === segment),
+  );
+
+  if (!allowed) {
+    throw new PolicyError(`shell_exec command is not allowed: ${requested.join(" ")}`);
+  }
+}
+
+function ensureToolSpecificArgs(tool: ToolDefinition, args: unknown, workspaceRoot: string): void {
+  if (tool.category === "filesystem") {
+    ensureFilesystemArgs(tool.name, args, workspaceRoot);
+    return;
+  }
+
+  if (tool.name === "shell_exec") {
+    ensureShellArgs(args);
   }
 }
 
@@ -84,7 +141,7 @@ export function guardToolCall(
     ensurePermissionMatches(tool.permission, request.permission);
     ensureArgsShape(request.args);
     ensureWorkspaceRoot(deps.workspaceRoot, request.workspaceRoot);
-    ensureFilesystemArgs(tool.name, request.args, deps.workspaceRoot);
+    ensureToolSpecificArgs(tool, request.args, deps.workspaceRoot);
 
     return {
       ok: true,

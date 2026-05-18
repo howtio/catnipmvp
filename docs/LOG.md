@@ -1,5 +1,54 @@
 # Construction Log
 
+## 2026-05-18 / Post Phase 6 / 扩展剩余工具与更细 guard
+
+### 目标
+
+按更大跨度继续推进，把剩余最小工具实现、shell 白名单 guard 和基础工具路由一并补齐。
+
+### 本次修改
+
+- 将 `write_file`、`patch_file`、`shell_exec` 标记为 `active`
+- Executor 新增 `write_file`、`patch_file`、`shell_exec` 的真实最小实现
+- guard 增加 shell 命令白名单校验
+- guard 为 `write_file`、`patch_file` 增加路径边界检查
+- Runner 改为按任务输入做最小工具路由，而不是固定调用 `list_files`
+- 扩展自动化测试，覆盖新工具和 shell guard
+
+### 修改文件
+
+- src/layers/07-runner/wrapper.ts
+- src/layers/09-tool-registry/wrapper.ts
+- src/layers/10-executor/guard.ts
+- src/layers/10-executor/tools.ts
+- tests/guard.test.ts
+- tests/tools.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/07-runner.md
+- docs/progress/layers/09-tool-registry.md
+- docs/progress/layers/10-executor.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，8 个测试全部通过
+- `node dist/src/main.js "write file smoke test"`：通过
+- `node dist/src/main.js "patch file smoke test"`：通过
+- `node dist/src/main.js "shell smoke test"`：通过
+
+### 风险
+
+- `patch_file` 当前是受控字符串替换，不是通用 patch 语法
+- `shell_exec` 当前仍只支持严格白名单命令
+- Runner 只是关键词路由，还不是完整 ReAct Loop
+
+### 下一步
+
+- 继续做 Runner 的多步决策和 provider adapter
+- 或细化工具参数 schema 与更强的 pathGuard / commandGuard
+
 ## 2026-05-18 / Phase 6 / 打通 JSONL 日志、run report 与基础测试
 
 ### 目标
