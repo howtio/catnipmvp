@@ -79,3 +79,32 @@
 ### 下一步
 
 - 在后续 Phase 中补 worker 生命周期控制与更细粒度观测
+
+## 2026-05-19 / CLI / 回写运行结果供 Gateway 展示
+
+### 当前目标
+
+让 Worker 在任务完成后把 Harness 的运行摘要透传回 Queue，使 CLI 能直接显示结果。
+
+### 本次完成
+
+- 将 `harness.runTask` 的依赖返回类型收紧为 `RunFinalReport`
+- 在任务成功完成时回写 `runId`
+- 在任务成功完成时回写 `finalAnswer`
+- 在任务成功完成时回写 `stepsUsed`
+- 在任务成功完成时回写 `toolSummaryCount`
+
+### 当前状态
+
+- 已完成：任务状态可携带最小运行摘要
+- 进行中：失败分类仍较粗
+- 未完成：更细运行指标、显式 shutdown、并发治理
+
+### 风险与阻塞
+
+- 当前任务对象承载了部分展示字段，后续若扩展更多结果结构，可能需要独立 result object
+
+### 下一步
+
+- 继续补 Worker 生命周期管理
+- 或在 Queue / Harness 间抽独立任务结果结构

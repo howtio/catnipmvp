@@ -8,5 +8,9 @@ export interface RunTask {
   createdAt: string;
   startedAt?: string;
   finishedAt?: string;
+  runId?: string;
+  finalAnswer?: string;
+  stepsUsed?: number;
+  toolSummaryCount?: number;
   errorMessage?: string;
 }

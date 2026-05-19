@@ -1,4 +1,5 @@
 import type { RunTask } from "../../shared/types/runTask.js";
+import type { RunFinalReport } from "../04-harness/index.js";
 
 export interface WorkerLayerDeps {
   queue: {
@@ -6,7 +7,7 @@ export interface WorkerLayerDeps {
     setStatus(taskId: string, status: RunTask["status"], patch?: Partial<RunTask>): void;
   };
   harness: {
-    runTask(task: RunTask): Promise<unknown>;
+    runTask(task: RunTask): Promise<RunFinalReport>;
   };
   heartbeatPublisher?: {
     publish(event: {

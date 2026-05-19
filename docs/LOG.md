@@ -933,3 +933,60 @@
 
 - 进入 Phase 1，先做 Queue 和 Worker 的最小可运行实现
 - 再逐层补 Harness、Context、Skills 的真实骨架逻辑
+
+## 2026-05-19 / CLI / 增强本地手测入口与结果回显
+
+### 目标
+
+优先提升本地 CLI 可测试性，让用户能在短期内直接输入任务并看到明显效果，而不是只支持最小单次参数运行。
+
+### 本次修改
+
+- 为 Gateway CLI 增加 `--help` / `--interactive`
+- 增加无参数 TTY 交互模式
+- 增加 stdin 管道输入支持
+- 抽出统一单任务执行逻辑
+- 在 CLI 侧输出 `runId`、`steps`、`tool summaries`、`durationMs`
+- 在 CLI 侧输出 `finalAnswer`
+- 扩展 `RunTask`，容纳最小运行结果字段
+- 在 Worker 完成任务后把 Harness report 回写到任务状态
+- 新增 CLI 参数解析测试
+- 更新 README 的 CLI quick start
+
+### 修改文件
+
+- README.md
+- src/layers/01-gateway/wrapper.ts
+- src/layers/03-worker/types.ts
+- src/layers/03-worker/wrapper.ts
+- src/shared/types/runTask.ts
+- tests/gateway.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+- docs/progress/layers/03-worker.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，14 个测试全部通过
+- `node dist/src/main.js "readme and git diff"`：通过
+- 确认 CLI 输出包含 `runId`、`steps`、`tool summaries`、`durationMs` 与 `finalAnswer`
+
+### 回滚判断
+
+- 本轮首次验证出现 `03-worker` 的类型边界错误
+- 已在当前分支局部修复 `WorkerLayerDeps.harness.runTask` 返回类型
+- 修复后全部验证通过，因此不执行文件级回滚或提交级回滚
+
+### 风险
+
+- 交互模式当前没有显式 shutdown，只适合本地手测
+- `finalAnswer` 较长时会直接打到终端，尚未做输出裁剪
+- 当前 CLI 仍是文本入口，不支持结构化子命令
+
+### 下一步
+
+- 继续围绕 CLI 做会话体验和输出格式优化
+- 或转入 Runner 的 step 上限、超时、失败恢复

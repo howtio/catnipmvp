@@ -28,9 +28,13 @@ export function createWorkerLayer(deps: WorkerLayerDeps): WorkerLayerApi {
       publishHeartbeat();
 
       try {
-        await deps.harness.runTask(task);
+        const report = await deps.harness.runTask(task);
         deps.queue.setStatus(task.id, "done", {
+          runId: report.runId,
           finishedAt: new Date().toISOString(),
+          finalAnswer: report.finalAnswer,
+          stepsUsed: report.stepsUsed,
+          toolSummaryCount: report.toolSummaryCount,
         });
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
