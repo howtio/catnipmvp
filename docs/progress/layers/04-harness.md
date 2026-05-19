@@ -79,6 +79,36 @@
 
 - 在后续阶段补 run 级日志和更细的验收结构
 
+## 2026-05-19 / Debug / 发布 prompt 组合事件
+
+### 当前目标
+
+让调试链路能看到一次 run 进入 Runner 前到底拿到了什么 prompt 相关上下文。
+
+### 本次完成
+
+- 在技能注入完成后发布 `prompt.composed`
+- 事件包含 `taskInput`
+- 事件包含 `systemPrompt`
+- 事件包含 `skillInstructions`
+- 事件包含 `selectedSkills`
+- 事件包含 `loadedDocuments`
+- 事件包含 `workspaceRoot`
+
+### 当前状态
+
+- 已完成：Runner 前关键 prompt 上下文可观测
+- 进行中：systemPrompt 仍是最小版
+- 未完成：更细 prompt 片段拆分与敏感信息脱敏策略
+
+### 风险与阻塞
+
+- prompt 事件会扩大日志体积
+
+### 下一步
+
+- 可继续细化 prompt 分段日志
+
 ## 2026-05-18 / Phase 6 / 落盘 run report
 
 ### 当前目标

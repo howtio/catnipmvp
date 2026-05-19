@@ -24,6 +24,35 @@ export type CatnipEvent =
       answer: string;
     }
   | {
+      type: "prompt.composed";
+      runId: string;
+      taskInput: string;
+      systemPrompt: string;
+      skillInstructions: string;
+      selectedSkills: string[];
+      loadedDocuments: string[];
+      workspaceRoot: string;
+    }
+  | {
+      type: "agent.plan.generated";
+      runId: string;
+      mode: string;
+      plannedToolCalls: Array<{
+        toolName: string;
+        reason: string;
+        args: unknown;
+      }>;
+      finalAnswerPrompt?: string;
+    }
+  | {
+      type: "agent.reasoning.summary";
+      runId: string;
+      stepNumber: number;
+      summary: string;
+      toolCalls?: number;
+      toolResults?: number;
+    }
+  | {
       type: "tool.call.requested";
       runId: string;
       toolCallId: string;

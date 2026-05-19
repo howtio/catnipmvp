@@ -1045,3 +1045,66 @@
 
 - 继续补 CLI 输出分级或历史持久化
 - 或回到 Runner 的 step/timeout/recovery 主线
+
+## 2026-05-19 / Debug / CLI 实时调试输出与本地 trace 日志
+
+### 目标
+
+让本地 CLI 手测时不仅能看到最终答案，还能看到 prompt、计划、步骤摘要和工具轨迹，并把这些信息落到单独的本地 trace 日志。
+
+### 本次修改
+
+- Gateway 新增 `--debug`
+- 支持 `CATNIP_CLI_DEBUG=1`
+- Gateway 订阅调试事件并实时打印
+- Harness 发布 `prompt.composed`
+- Runner 发布 `agent.plan.generated`
+- Runner 发布 `agent.reasoning.summary`
+- bootstrap 新增 `logs/catnip-trace.jsonl`
+- trace 日志订阅并记录 prompt / plan / reasoning / tool / finalAnswer 事件
+- 更新 `.env.example`
+- 更新 README 调试说明
+
+### 修改文件
+
+- .env.example
+- README.md
+- src/bootstrap.ts
+- src/layers/01-gateway/types.ts
+- src/layers/01-gateway/wrapper.ts
+- src/layers/04-harness/wrapper.ts
+- src/layers/07-runner/wrapper.ts
+- src/shared/types/event.ts
+- tests/gateway.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+- docs/progress/layers/04-harness.md
+- docs/progress/layers/07-runner.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，16 个测试全部通过
+- `CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js --debug "readme and git diff"`：通过
+- `logs/catnip-trace.jsonl`：确认写入 prompt、reasoning summary、tool request/result、final answer
+
+### 回滚判断
+
+- 本轮先后遇到两类类型问题：
+- Gateway 订阅事件时缺少事件字段收窄
+- `EventBusEvent` 动态字段读取缺少索引转换
+- 两类问题都已在当前分支局部修复
+- 修复后验证通过，因此不执行文件级回滚或提交级回滚
+
+### 风险
+
+- 开启 `--debug` 后输出量会明显变大
+- trace 日志会记录完整 prompt 和较长工具结果，文件增长会更快
+- 当前记录的是公开调试摘要，不是隐藏推理链
+
+### 下一步
+
+- 可继续补调试输出级别
+- 或回到 Runner 的超时、步数上限和失败恢复

@@ -10,13 +10,34 @@ import { createToolRegistryLayer } from "./layers/09-tool-registry/index.js";
 import { createExecutorLayer } from "./layers/10-executor/index.js";
 import { createJsonlLogger } from "./shared/logger/jsonlLogger.js";
 import { loadLocalEnvFiles } from "./shared/utils/loadLocalEnv.js";
+import type { EventBusEvent } from "./layers/08-eventbus/index.js";
+
+const TRACE_EVENT_TYPES = new Set([
+  "prompt.composed",
+  "agent.plan.generated",
+  "agent.reasoning.summary",
+  "tool.call.requested",
+  "tool.call.result",
+  "tool.call.failed",
+  "agent.answer.produced",
+]);
 
 export function bootstrapCatnipAgent() {
   loadLocalEnvFiles();
   const jsonlLogger = createJsonlLogger();
+  const traceLogger = createJsonlLogger({
+    filePath: `${process.cwd()}/logs/catnip-trace.jsonl`,
+  });
   const eventbus = createEventBusLayer({
     logger: jsonlLogger,
   });
+  eventbus.subscribe("prompt.composed", writeTraceEvent);
+  eventbus.subscribe("agent.plan.generated", writeTraceEvent);
+  eventbus.subscribe("agent.reasoning.summary", writeTraceEvent);
+  eventbus.subscribe("tool.call.requested", writeTraceEvent);
+  eventbus.subscribe("tool.call.result", writeTraceEvent);
+  eventbus.subscribe("tool.call.failed", writeTraceEvent);
+  eventbus.subscribe("agent.answer.produced", writeTraceEvent);
   const toolRegistry = createToolRegistryLayer();
   const runnerProvider = createRunnerProviderFromEnv();
   const executor = createExecutorLayer({
@@ -46,6 +67,7 @@ export function bootstrapCatnipAgent() {
   });
   const gateway = createGatewayLayer({
     queue,
+    eventbus,
   });
 
   return {
@@ -61,4 +83,16 @@ export function bootstrapCatnipAgent() {
     executor,
     jsonlLogger,
   };
+
+  function writeTraceEvent(event: EventBusEvent): void {
+    if (!TRACE_EVENT_TYPES.has(event.type)) {
+      return;
+    }
+
+    traceLogger.write({
+      ts: new Date().toISOString(),
+      event: event.type,
+      payload: event,
+    });
+  }
 }

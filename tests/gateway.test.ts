@@ -7,14 +7,16 @@ test("parseCliArgs reads single-run input text", () => {
 
   assert.equal(parsed.showHelp, false);
   assert.equal(parsed.interactive, false);
+  assert.equal(parsed.debug, false);
   assert.equal(parsed.inputText, "readme and git diff");
 });
 
 test("parseCliArgs detects interactive and help flags", () => {
-  const parsed = parseCliArgs(["--interactive", "--help"]);
+  const parsed = parseCliArgs(["--interactive", "--help", "--debug"]);
 
   assert.equal(parsed.showHelp, true);
   assert.equal(parsed.interactive, true);
+  assert.equal(parsed.debug, true);
   assert.equal(parsed.inputText, undefined);
 });
 

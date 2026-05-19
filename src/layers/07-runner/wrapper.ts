@@ -17,6 +17,12 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
         args: Record<string, unknown>;
         reason: string;
       }) => {
+        deps.eventbus.publish({
+          type: "agent.reasoning.summary",
+          runId,
+          stepNumber: stepCount + 1,
+          summary: `${plannedCall.reason} Tool: ${plannedCall.toolName}.`,
+        });
         const toolCallId = createId("toolcall");
         const toolResultPromise = deps.eventbus.waitForToolResult(runId, toolCallId);
         deps.eventbus.publish({
@@ -53,10 +59,25 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
       };
 
       if (deps.provider.runWithTools) {
+        deps.eventbus.publish({
+          type: "agent.plan.generated",
+          runId,
+          mode: "provider-tool-calling",
+          plannedToolCalls: [],
+          finalAnswerPrompt: "Provider-managed tool calling loop.",
+        });
         const providerRunResult = await deps.provider.runWithTools(context, availableTools, {
           executeToolCall,
           onStepFinish(event) {
             stepCount = Math.max(stepCount, event.stepNumber + 1);
+            deps.eventbus.publish({
+              type: "agent.reasoning.summary",
+              runId,
+              stepNumber: event.stepNumber,
+              summary: event.text,
+              toolCalls: event.toolCalls,
+              toolResults: event.toolResults,
+            });
           },
         });
         deps.eventbus.publish({
@@ -68,7 +89,24 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
       }
 
       const plan = await deps.provider.plan(context, availableTools);
+      deps.eventbus.publish({
+        type: "agent.plan.generated",
+        runId,
+        mode: "planned-tool-calls",
+        plannedToolCalls: plan.plannedToolCalls.map((plannedCall) => ({
+          toolName: plannedCall.toolName,
+          reason: plannedCall.reason,
+          args: plannedCall.args,
+        })),
+        finalAnswerPrompt: plan.finalAnswerPrompt,
+      });
       if (plan.plannedToolCalls.length === 0) {
+        deps.eventbus.publish({
+          type: "agent.reasoning.summary",
+          runId,
+          stepNumber: 1,
+          summary: "No tool calls were planned for this task.",
+        });
         deps.eventbus.publish({
           type: "agent.step.finished",
           runId,

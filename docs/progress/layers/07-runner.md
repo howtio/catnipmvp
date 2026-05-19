@@ -222,3 +222,34 @@
 ### 下一步
 
 - 在后续阶段补 step 上限、超时和失败恢复策略
+
+## 2026-05-19 / Debug / 发布计划与步骤摘要事件
+
+### 当前目标
+
+让 Runner 在调试模式下能公开输出“计划什么、为什么调工具、每一步模型公开文本说了什么”。
+
+### 本次完成
+
+- 新增 `agent.plan.generated`
+- 新增 `agent.reasoning.summary`
+- 计划模式下发布 planned tool calls
+- provider tool calling 模式下发布 provider-managed plan 事件
+- 工具执行前发布基于 `reason` 的步骤摘要
+- provider `onStepFinish` 后发布公开文本摘要
+
+### 当前状态
+
+- 已完成：Runner 关键决策过程可观测
+- 进行中：摘要内容仍依赖模型公开输出质量
+- 未完成：step 限制、超时、失败恢复
+
+### 风险与阻塞
+
+- 调试摘要不是隐藏推理链，只是公开步骤说明
+- 某些任务下摘要文本可能很长
+
+### 下一步
+
+- 继续补 step/timeout/recovery 主线
+- 或给摘要输出增加裁剪和级别控制

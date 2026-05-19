@@ -34,6 +34,16 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
 
         const enrichedContext = await deps.skills.injectSkills(context);
         deps.eventbus.publish({
+          type: "prompt.composed",
+          runId,
+          taskInput: task.input,
+          systemPrompt: enrichedContext.systemPrompt,
+          skillInstructions: enrichedContext.skillInstructions,
+          selectedSkills: enrichedContext.skillNames,
+          loadedDocuments: enrichedContext.docs.coreDocuments.map((document) => document.path),
+          workspaceRoot: enrichedContext.workspace.root,
+        });
+        deps.eventbus.publish({
           type: "run.heartbeat",
           runId,
           at: new Date().toISOString(),

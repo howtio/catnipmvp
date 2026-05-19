@@ -143,3 +143,36 @@
 
 - 可继续补输出格式分级
 - 或补持久化 session history
+
+## 2026-05-19 / CLI / 增加实时调试输出
+
+### 当前目标
+
+让 CLI 在本地手测时直接打印 prompt、计划、步骤摘要和工具轨迹，便于观察与调试。
+
+### 本次完成
+
+- 新增 `--debug`
+- 支持 `CATNIP_CLI_DEBUG=1`
+- Gateway 订阅调试事件并实时打印
+- 打印 `prompt.composed`
+- 打印 `agent.plan.generated`
+- 打印 `agent.reasoning.summary`
+- 打印 `tool.call.requested / result / failed`
+- 打印 `agent.answer.produced`
+
+### 当前状态
+
+- 已完成：CLI 可实时打印公开调试过程
+- 进行中：输出仍为直出文本
+- 未完成：输出级别切换、摘要/详细模式分层
+
+### 风险与阻塞
+
+- 开启调试后终端输出会明显增多
+- 工具结果可能包含较长文本，当前未裁剪
+
+### 下一步
+
+- 可补 `--debug=summary|full` 之类的输出级别
+- 或继续优化 trace 日志可读性

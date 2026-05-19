@@ -3,10 +3,12 @@ import type { RunTask } from "../../shared/types/runTask.js";
 import type { GatewayLayerApi, GatewayLayerDeps } from "./types.js";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
+import type { EventBusEvent } from "../08-eventbus/index.js";
 
 interface ParsedCliArgs {
   showHelp: boolean;
   interactive: boolean;
+  debug: boolean;
   inputText?: string;
 }
 
@@ -28,6 +30,7 @@ export function parseCliArgs(argv: string[]): ParsedCliArgs {
   const positionals: string[] = [];
   let showHelp = false;
   let interactive = false;
+  let debug = false;
 
   for (const arg of argv) {
     if (arg === "--help" || arg === "-h") {
@@ -40,6 +43,11 @@ export function parseCliArgs(argv: string[]): ParsedCliArgs {
       continue;
     }
 
+    if (arg === "--debug") {
+      debug = true;
+      continue;
+    }
+
     positionals.push(arg);
   }
 
@@ -48,6 +56,7 @@ export function parseCliArgs(argv: string[]): ParsedCliArgs {
   return {
     showHelp,
     interactive,
+    debug,
     ...(inputText.length > 0 ? { inputText } : {}),
   };
 }
@@ -110,6 +119,7 @@ function printHelp(): void {
   console.log("Usage:");
   console.log('  node dist/src/main.js "your task"');
   console.log("  node dist/src/main.js --interactive");
+  console.log("  node dist/src/main.js --debug \"your task\"");
   console.log("  echo \"your task\" | node dist/src/main.js");
   console.log("");
   console.log("Interactive commands:");
@@ -118,6 +128,85 @@ function printHelp(): void {
   console.log("  /last  Show the last final answer again");
   console.log("  /clear  Clear session history");
   console.log("  /exit  Exit the CLI");
+}
+
+function formatDebugPayload(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return JSON.stringify(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function readEventField(event: EventBusEvent, fieldName: string): unknown {
+  if (!isRecord(event)) {
+    return undefined;
+  }
+
+  return (event as Record<string, unknown>)[fieldName];
+}
+
+function setupDebugOutput(deps: GatewayLayerDeps): () => void {
+  if (!deps.eventbus) {
+    return () => {};
+  }
+
+  const unsubscribers = [
+    deps.eventbus.subscribe("prompt.composed", (event) => {
+      console.log("");
+      console.log("[debug] prompt.composed");
+      console.log(`[debug] task: ${formatDebugPayload(readEventField(event, "taskInput"))}`);
+      console.log(`[debug] systemPrompt: ${formatDebugPayload(readEventField(event, "systemPrompt"))}`);
+      console.log(
+        `[debug] skillInstructions: ${formatDebugPayload(readEventField(event, "skillInstructions"))}`,
+      );
+      console.log(`[debug] selectedSkills: ${formatDebugPayload(readEventField(event, "selectedSkills"))}`);
+      console.log(`[debug] loadedDocuments: ${formatDebugPayload(readEventField(event, "loadedDocuments"))}`);
+    }),
+    deps.eventbus.subscribe("agent.plan.generated", (event) => {
+      console.log("");
+      console.log(`[debug] agent.plan.generated mode=${formatDebugPayload(readEventField(event, "mode"))}`);
+      console.log(
+        `[debug] plannedToolCalls: ${formatDebugPayload(readEventField(event, "plannedToolCalls"))}`,
+      );
+      const finalAnswerPrompt = readEventField(event, "finalAnswerPrompt");
+      if (finalAnswerPrompt !== undefined) {
+        console.log(`[debug] finalAnswerPrompt: ${formatDebugPayload(finalAnswerPrompt)}`);
+      }
+    }),
+    deps.eventbus.subscribe("agent.reasoning.summary", (event) => {
+      console.log(
+        `[debug] step=${formatDebugPayload(readEventField(event, "stepNumber"))} summary=${formatDebugPayload(readEventField(event, "summary"))}`,
+      );
+    }),
+    deps.eventbus.subscribe("tool.call.requested", (event) => {
+      console.log(
+        `[debug] tool.request tool=${formatDebugPayload(readEventField(event, "toolName"))} args=${formatDebugPayload(readEventField(event, "args"))}`,
+      );
+    }),
+    deps.eventbus.subscribe("tool.call.result", (event) => {
+      console.log(
+        `[debug] tool.result ok=${formatDebugPayload(readEventField(event, "ok"))} result=${formatDebugPayload(readEventField(event, "result"))}`,
+      );
+    }),
+    deps.eventbus.subscribe("tool.call.failed", (event) => {
+      console.log(`[debug] tool.failed error=${formatDebugPayload(readEventField(event, "error"))}`);
+    }),
+    deps.eventbus.subscribe("agent.answer.produced", (event) => {
+      console.log("");
+      console.log(`[debug] finalAnswer: ${formatDebugPayload(readEventField(event, "answer"))}`);
+    }),
+  ];
+
+  return () => {
+    for (const unsubscribe of unsubscribers) {
+      unsubscribe();
+    }
+  };
 }
 
 function printRunResult(result: CliRunResult): void {
@@ -272,6 +361,13 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
   return {
     async startCli(): Promise<void> {
       const parsed = parseCliArgs(process.argv.slice(2));
+      const debugEnabled = parsed.debug || process.env.CATNIP_CLI_DEBUG === "1";
+      const teardownDebugOutput = debugEnabled ? setupDebugOutput(deps) : () => {};
+      if (debugEnabled) {
+        console.log("[gateway] debug output enabled");
+        console.log("[gateway] trace log file: logs/catnip-trace.jsonl");
+      }
+      try {
       if (parsed.showHelp) {
         printHelp();
         return;
@@ -295,6 +391,9 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
       }
 
       await runTaskInput(stdinText, createId("session"));
+      } finally {
+        teardownDebugOutput();
+      }
     },
   };
 }
