@@ -1,5 +1,34 @@
 # 04 Harness Progress
 
+## 2026-05-19 / Large Step / 增加 run 级超时与失败报告
+
+### 当前目标
+
+让 Harness 不只负责成功路径编排，还能统一处理 run 级超时和失败报告落盘。
+
+### 本次完成
+
+- 为 Harness 增加 `runTimeoutMs` 配置
+- 对 `runner.run` 增加 run 级超时包装
+- 超时失败时抛出 `TimeoutError`
+- 失败路径也写入 `run.report`
+- `run.finished` 增加 `failureKind` 与 `errorMessage`
+- 新增 Harness 超时测试
+
+### 当前状态
+
+- 已完成：run 级超时和最小失败分类
+- 进行中：失败报告字段仍较精简
+- 未完成：更完整验收结果、失败分层与取消传播
+
+### 风险与阻塞
+
+- 当前超时只终止外层等待，不会真正取消底层仍在执行的异步任务
+
+### 下一步
+
+- 在后续阶段继续扩展失败报告字段和验收结构
+
 ## 2026-05-18 / Phase 0 / 初始化
 
 ### 当前目标

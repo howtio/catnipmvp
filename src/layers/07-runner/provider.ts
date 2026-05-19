@@ -32,6 +32,7 @@ export interface RunnerProvider {
     helpers: {
       executeToolCall(plannedCall: PlannedToolCall): Promise<ToolExecutionSummary>;
       onStepFinish(event: { stepNumber: number; toolCalls: number; toolResults: number; text: string }): void;
+      maxSteps: number;
     },
   ): Promise<RunnerRunResult>;
 }
@@ -336,7 +337,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
           "Do not invent tool names or parameters outside the schemas.",
         ].join("\n\n"),
         prompt: context.task.input,
-        stopWhen: stepCountIs(5),
+        stopWhen: stepCountIs(helpers.maxSteps),
         tools: {
           list_files: defineTool({
             description: "List files inside the workspace.",

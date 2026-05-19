@@ -26,6 +26,34 @@ const TRACE_EVENT_TYPES = new Set([
   "agent.answer.produced",
 ]);
 
+function readPositiveIntegerEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  if (typeof rawValue !== "string" || rawValue.length === 0) {
+    return fallback;
+  }
+
+  const parsedValue = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    return fallback;
+  }
+
+  return parsedValue;
+}
+
+function readNonNegativeIntegerEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  if (typeof rawValue !== "string" || rawValue.length === 0) {
+    return fallback;
+  }
+
+  const parsedValue = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    return fallback;
+  }
+
+  return parsedValue;
+}
+
 export function bootstrapCatnipAgent() {
   loadLocalEnvFiles();
   const jsonlLogger = createJsonlLogger();
@@ -53,6 +81,11 @@ export function bootstrapCatnipAgent() {
     eventbus,
     toolRegistry,
     provider: runnerProvider,
+    limits: {
+      maxSteps: readPositiveIntegerEnv("CATNIP_RUNNER_MAX_STEPS", 5),
+      continueOnToolError: process.env.CATNIP_RUNNER_CONTINUE_ON_TOOL_ERROR === "1",
+      maxToolRetries: readNonNegativeIntegerEnv("CATNIP_RUNNER_MAX_TOOL_RETRIES", 0),
+    },
   });
   const skills = createSkillsLayer();
   const context = createContextLayer();
@@ -62,6 +95,9 @@ export function bootstrapCatnipAgent() {
     runner,
     eventbus,
     reportLogger: jsonlLogger,
+    limits: {
+      runTimeoutMs: readPositiveIntegerEnv("CATNIP_RUN_TIMEOUT_MS", 60_000),
+    },
   });
   const queue = createQueueLayer();
   const worker = createWorkerLayer({

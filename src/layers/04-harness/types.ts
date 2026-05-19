@@ -3,6 +3,10 @@ import type { RunContext } from "../05-context/index.js";
 import type { EnrichedRunContext } from "../06-skills/index.js";
 import type { RunnerRunResult } from "../07-runner/index.js";
 
+export interface HarnessRunLimits {
+  runTimeoutMs: number;
+}
+
 export interface RunFinalReport {
   runId: string;
   taskId: string;
@@ -33,6 +37,7 @@ export interface HarnessLayerDeps {
   reportLogger: {
     write(entry: Record<string, unknown>): void;
   };
+  limits?: Partial<HarnessRunLimits>;
 }
 
 export interface HarnessLayerApi {

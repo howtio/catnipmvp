@@ -3,13 +3,33 @@ import type { EnrichedRunContext } from "../06-skills/index.js";
 import { createId } from "../../shared/utils/createId.js";
 import { buildFinalAnswer, summarizeToolOutcome } from "./planner.js";
 import type { PermissionLevel } from "../../shared/types/permission.js";
+import type { RunnerExecutionLimits } from "./types.js";
+import type { ToolExecutionSummary } from "./planner.js";
+
+const DEFAULT_LIMITS: RunnerExecutionLimits = {
+  maxSteps: 5,
+  continueOnToolError: false,
+  maxToolRetries: 0,
+};
 
 export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
+  const limits: RunnerExecutionLimits = {
+    ...DEFAULT_LIMITS,
+    ...deps.limits,
+  };
+
   return {
     async run(context: EnrichedRunContext) {
       const runId = context.runId;
       const availableTools = deps.toolRegistry.listTools();
       let stepCount = 0;
+      const toolSummaries: ToolExecutionSummary[] = [];
+
+      const ensureStepBudget = () => {
+        if (stepCount >= limits.maxSteps) {
+          throw new Error(`Runner step limit reached (${limits.maxSteps}).`);
+        }
+      };
 
       const executeToolCall = async (plannedCall: {
         toolName: string;
@@ -17,45 +37,73 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
         args: Record<string, unknown>;
         reason: string;
       }) => {
-        deps.eventbus.publish({
-          type: "agent.reasoning.summary",
-          runId,
-          stepNumber: stepCount + 1,
-          summary: `${plannedCall.reason} Tool: ${plannedCall.toolName}.`,
-        });
-        const toolCallId = createId("toolcall");
-        const toolResultPromise = deps.eventbus.waitForToolResult(runId, toolCallId);
-        deps.eventbus.publish({
-          type: "tool.call.requested",
-          runId,
-          toolCallId,
-          toolName: plannedCall.toolName,
-          args: plannedCall.args,
-          workspaceRoot: context.workspace.root,
-          permission: plannedCall.permission,
-        });
+        let attempt = 0;
 
-        const toolResult = await toolResultPromise;
-        const toolSummary = summarizeToolOutcome(plannedCall, toolResult);
-        stepCount += 1;
-        deps.eventbus.publish({
-          type: "agent.step.finished",
-          runId,
-          stepNumber: stepCount,
-          usage: {
-            mode: "tool-skeleton",
-            contextKeys: Object.keys(context),
+        for (;;) {
+          ensureStepBudget();
+          deps.eventbus.publish({
+            type: "agent.reasoning.summary",
+            runId,
+            stepNumber: stepCount + 1,
+            summary: `${plannedCall.reason} Tool: ${plannedCall.toolName}. Attempt ${attempt + 1}.`,
+          });
+          const toolCallId = createId("toolcall");
+          const toolResultPromise = deps.eventbus.waitForToolResult(runId, toolCallId);
+          deps.eventbus.publish({
+            type: "tool.call.requested",
+            runId,
+            toolCallId,
             toolName: plannedCall.toolName,
-            toolOk: toolResult.ok,
-            reason: plannedCall.reason,
-          },
-        });
+            args: plannedCall.args,
+            workspaceRoot: context.workspace.root,
+            permission: plannedCall.permission,
+          });
 
-        if (!toolResult.ok) {
-          throw new Error(toolResult.error);
+          const toolResult = await toolResultPromise;
+          const toolSummary = summarizeToolOutcome(plannedCall, toolResult);
+          stepCount += 1;
+          deps.eventbus.publish({
+            type: "agent.step.finished",
+            runId,
+            stepNumber: stepCount,
+            usage: {
+              mode: "tool-skeleton",
+              contextKeys: Object.keys(context),
+              toolName: plannedCall.toolName,
+              toolOk: toolResult.ok,
+              reason: plannedCall.reason,
+              attempt: attempt + 1,
+            },
+          });
+
+          if (toolResult.ok) {
+            toolSummaries.push(toolSummary);
+            return toolSummary;
+          }
+
+          if (attempt < limits.maxToolRetries) {
+            attempt += 1;
+            deps.eventbus.publish({
+              type: "agent.reasoning.summary",
+              runId,
+              stepNumber: stepCount,
+              summary: `Tool ${plannedCall.toolName} failed and will be retried. ${toolResult.error}`,
+            });
+            continue;
+          }
+
+          toolSummaries.push(toolSummary);
+          if (!limits.continueOnToolError) {
+            throw new Error(toolResult.error);
+          }
+          deps.eventbus.publish({
+            type: "agent.reasoning.summary",
+            runId,
+            stepNumber: stepCount,
+            summary: `Tool ${plannedCall.toolName} failed and the run will continue. ${toolResult.error}`,
+          });
+          return toolSummary;
         }
-
-        return toolSummary;
       };
 
       if (deps.provider.runWithTools) {
@@ -68,6 +116,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
         });
         const providerRunResult = await deps.provider.runWithTools(context, availableTools, {
           executeToolCall,
+          maxSteps: limits.maxSteps,
           onStepFinish(event) {
             stepCount = Math.max(stepCount, event.stepNumber + 1);
             deps.eventbus.publish({
@@ -85,7 +134,11 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
           runId,
           answer: providerRunResult.finalAnswer,
         });
-        return providerRunResult;
+        return {
+          ...providerRunResult,
+          stepsUsed: stepCount,
+          toolSummaries: providerRunResult.toolSummaries.length > 0 ? providerRunResult.toolSummaries : toolSummaries,
+        };
       }
 
       const plan = await deps.provider.plan(context, availableTools);
@@ -123,16 +176,14 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
         };
       }
 
-      const toolSummaries = [];
-
       for (const plannedCall of plan.plannedToolCalls) {
+        ensureStepBudget();
         const selectedTool = availableTools.find((tool) => tool.name === plannedCall.toolName);
         if (!selectedTool) {
           throw new Error(`Runner selected an unknown tool: ${plannedCall.toolName}`);
         }
         void selectedTool;
-        const toolSummary = await executeToolCall(plannedCall);
-        toolSummaries.push(toolSummary);
+        await executeToolCall(plannedCall);
       }
 
       const finalAnswer = buildFinalAnswer(toolSummaries);

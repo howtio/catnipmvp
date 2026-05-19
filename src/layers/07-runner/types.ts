@@ -3,6 +3,12 @@ import type { ToolCallFailedEvent, ToolCallResultEvent } from "../08-eventbus/in
 import type { AvailableTool, RunnerProvider } from "./provider.js";
 import type { RunnerRunResult } from "./planner.js";
 
+export interface RunnerExecutionLimits {
+  maxSteps: number;
+  continueOnToolError: boolean;
+  maxToolRetries: number;
+}
+
 export interface RunnerLayerDeps {
   eventbus: {
     publish(event: { type: string; [key: string]: unknown }): void;
@@ -10,6 +16,7 @@ export interface RunnerLayerDeps {
   };
   toolRegistry: { listTools(): AvailableTool[] };
   provider: RunnerProvider;
+  limits?: Partial<RunnerExecutionLimits>;
 }
 
 export interface RunnerLayerApi {

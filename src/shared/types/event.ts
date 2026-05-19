@@ -11,6 +11,8 @@ export type CatnipEvent =
       type: "run.finished";
       runId: string;
       success: boolean;
+      failureKind?: "none" | "timeout" | "runtime";
+      errorMessage?: string;
     }
   | {
       type: "agent.step.finished";

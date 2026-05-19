@@ -1,5 +1,102 @@
 # Construction Log
 
+## 2026-05-19 / Docs / 调整上传与回滚默认规则
+
+### 目标
+
+按用户最新协作偏好修正文档默认规则：每次开发完成后都上传，是否回滚先询问用户。
+
+### 本次修改
+
+- 修改主文档开工前清单
+- 修改主文档收尾清单
+- 修改 GitHub 上传标准
+- 修改回滚标准
+- 明确默认自动 push 的条件
+- 明确回滚前必须先征求用户确认
+- 同步更新 `docs/progress/README.md`
+- 同步更新 `docs/DEV_PROGRESS.md`
+
+### 修改文件
+
+- CODEX_MASTER_REQUIREMENTS.md
+- docs/progress/README.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+
+### 验证结果
+
+- 本轮为文档修改
+- 已人工检查关键规则段落一致性
+
+### 回滚判断
+
+- 本轮仅调整文档规则
+- 不执行回滚
+
+### 下一步
+
+- 后续每轮代码开发在测试通过后默认执行 push
+- 如果出现需要撤销的情况，先询问用户再决定是否回滚
+
+## 2026-05-19 / Large Step / 统一 Runner 步数限制、超时与失败恢复
+
+### 目标
+
+把文档里长期挂着的“step 上限、超时与失败恢复”从待办推进为可配置、可测试的真实运行限制。
+
+### 本次修改
+
+- 为 `createRunnerLayer` 增加统一运行限制配置
+- 支持 `maxSteps`
+- 支持工具失败后按 `maxToolRetries` 重试
+- 支持 `continueOnToolError` 控制失败后继续执行后续计划
+- 将 DeepSeek provider 的 `stepCountIs(5)` 改为读取 Runner 传入限制
+- 为 Harness 增加 run 级超时包装
+- 在 run 失败时写入 `run.report`
+- 为 `run.finished` 增加 `failureKind` 与 `errorMessage`
+- 新增环境变量：`CATNIP_RUNNER_MAX_STEPS`、`CATNIP_RUNNER_MAX_TOOL_RETRIES`、`CATNIP_RUNNER_CONTINUE_ON_TOOL_ERROR`、`CATNIP_RUN_TIMEOUT_MS`
+- 新增 Runner 限制测试与 Harness 超时测试
+
+### 修改文件
+
+- .env.example
+- src/bootstrap.ts
+- src/layers/04-harness/types.ts
+- src/layers/04-harness/wrapper.ts
+- src/layers/07-runner/provider.ts
+- src/layers/07-runner/types.ts
+- src/layers/07-runner/wrapper.ts
+- src/shared/types/event.ts
+- tests/harness.test.ts
+- tests/runner.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/04-harness.md
+- docs/progress/layers/07-runner.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，19 个测试全部通过
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 运行限制与测试均通过，暂不执行文件级回滚或提交级回滚
+
+### 风险
+
+- provider tool-calling 模式目前依赖模型侧 `stopWhen` 与 Runner 侧预算双重限制，后续还应继续补更细的中止原因
+- 当前“失败恢复”仍是最小策略，只支持固定重试次数与是否继续，不含分类重试或补救规划
+- 超时后底层异步任务不会被真正取消，只是 run 结果提前失败
+
+### 下一步
+
+- 继续细化失败分类与恢复策略
+- 或补 run 级验收结构与更完整的回滚建议
+
 ## 2026-05-19 / Large Step / 接通 DeepSeek 的 AI SDK tool calling
 
 ### 目标

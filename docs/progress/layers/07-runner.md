@@ -1,5 +1,38 @@
 # 07 Runner Progress
 
+## 2026-05-19 / Large Step / 统一运行限制与失败恢复
+
+### 当前目标
+
+把 Runner 的步数上限、工具失败处理和重试从分散实现收口成统一策略，并让 provider tool calling 也受同一限制控制。
+
+### 本次完成
+
+- 新增 Runner 统一运行限制配置
+- 支持 `maxSteps`
+- 支持 `maxToolRetries`
+- 支持 `continueOnToolError`
+- 在 planned tool calls 路径下强制检查步数预算
+- 工具失败时按配置重试或继续
+- DeepSeek provider 的 `stopWhen` 改为读取外层 `maxSteps`
+- 新增运行限制相关测试
+
+### 当前状态
+
+- 已完成：步数上限、最小失败恢复、最小重试控制
+- 进行中：provider tool calling 的中止原因仍较粗
+- 未完成：分类重试、动态恢复规划、更细模型兼容验证
+
+### 风险与阻塞
+
+- 真实模型 tool calling 仍可能因为 provider 自身行为导致步数与本地统计存在轻微差异
+- 当前失败恢复只适合 MVP，不适合复杂修复型任务
+
+### 下一步
+
+- 继续细化失败分类与恢复策略
+- 或补更完整的 provider 级停止原因与运行验收
+
 ## 2026-05-18 / Phase 0 / 初始化
 
 ### 当前目标

@@ -4,7 +4,7 @@
 
 ### 进行中
 
-- 评估 step 上限、超时与失败恢复的统一策略
+- 评估更细的失败分类、恢复策略与运行级验收结构
 
 ### 已完成
 
@@ -52,8 +52,13 @@
 - 完成 prompt / plan / reasoning summary 事件落盘与实时打印
 - 完成 CLI 层状态线实时打印
 - 完成 `run.started / run.heartbeat / agent.step.finished / run.finished` 调试追踪
+- 完成 Runner 统一运行限制：`maxSteps`、工具失败重试、失败后可选继续
+- 完成 Harness run 级超时包装与 `TimeoutError` 失败分类
+- 完成运行限制环境变量：`CATNIP_RUNNER_MAX_STEPS`、`CATNIP_RUNNER_MAX_TOOL_RETRIES`、`CATNIP_RUNNER_CONTINUE_ON_TOOL_ERROR`、`CATNIP_RUN_TIMEOUT_MS`
+- 完成超时与运行限制测试：`tests/harness.test.ts`、`tests/runner.test.ts`
 - 强化主施工文档：新增每次开工前与每次收尾强制清单
 - 强化主施工文档：明确每轮代码开发都必须检查日志、push 与回滚判断
+- 强化主施工文档：默认每次开发完成后上传，回滚前必须先询问用户
 - `npm run typecheck` 通过
 - `npm run build` 通过
 - `npm test` 通过
@@ -77,10 +82,9 @@
 
 ### 未开始
 
-- Runner provider 抽象
-- DeepSeek 接入
 - GitHub 仓库实际接入
-- step 上限、超时、失败恢复与重试
+- 更细的失败分类与恢复策略
+- 运行级验收与回滚建议结构化输出
 
 ### 备注
 
