@@ -55,6 +55,23 @@ function includesAny(input: string, patterns: string[]): boolean {
   return patterns.some((pattern) => input.includes(pattern));
 }
 
+function deriveSearchQuery(taskInput: string): string {
+  const stripped = taskInput
+    .replace(/open browser search/gi, " ")
+    .replace(/search in browser/gi, " ")
+    .replace(/web search/gi, " ")
+    .replace(/search web/gi, " ")
+    .replace(/search online/gi, " ")
+    .replace(/打开浏览器搜索/gu, " ")
+    .replace(/浏览器搜索/gu, " ")
+    .replace(/网页搜索/gu, " ")
+    .replace(/搜一下/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return stripped.length > 0 ? stripped : taskInput;
+}
+
 function normalizePlannedToolArgs(toolName: string, args: Record<string, unknown>): Record<string, unknown> {
   switch (toolName) {
     case "list_files":
@@ -90,6 +107,31 @@ function normalizePlannedToolArgs(toolName: string, args: Record<string, unknown
           Array.isArray(args.argv) && args.argv.every((item) => typeof item === "string")
             ? args.argv
             : ["status"],
+      };
+    case "open_browser":
+      return {
+        path:
+          typeof args.path === "string" && args.path.length > 0
+            ? args.path
+            : "workspaces/demo/generated.html",
+      };
+    case "web_search":
+      return {
+        query:
+          typeof args.query === "string" && args.query.trim().length > 0
+            ? args.query.trim()
+            : "catnip agent",
+        limit:
+          typeof args.limit === "number" && Number.isInteger(args.limit)
+            ? Math.max(1, Math.min(10, args.limit))
+            : 5,
+      };
+    case "open_browser_search":
+      return {
+        query:
+          typeof args.query === "string" && args.query.trim().length > 0
+            ? args.query.trim()
+            : "catnip agent",
       };
     case "git_diff":
       return {};
@@ -149,13 +191,33 @@ export function createHeuristicRunnerProvider(): RunnerProvider {
       }
 
       if (includesAny(taskInput, ["write file", "generate file", "create file"])) {
+        const defaultPath =
+          includesAny(taskInput, ["html", ".html", "web page", "webpage"]) ?
+            "workspaces/demo/generated.html" :
+            "workspaces/demo/generated.txt";
+        const defaultContent =
+          defaultPath.endsWith(".html")
+            ? [
+                "<!doctype html>",
+                "<html lang=\"en\">",
+                "<head>",
+                "  <meta charset=\"UTF-8\" />",
+                "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />",
+                "  <title>Catnip Demo</title>",
+                "</head>",
+                "<body>",
+                `  <h1>${context.task.input}</h1>`,
+                "</body>",
+                "</html>",
+              ].join("\n")
+            : `Generated from task: ${context.task.input}\n`;
         plannedToolCalls.push(
           buildPlannedToolCall(
             "write_file",
             "medium",
             {
-              path: "workspaces/demo/generated.txt",
-              content: `Generated from task: ${context.task.input}\n`,
+              path: defaultPath,
+              content: defaultContent,
             },
             "Create a demo file for workflow validation.",
           ),
@@ -187,6 +249,51 @@ export function createHeuristicRunnerProvider(): RunnerProvider {
               argv: ["status"],
             },
             "Run a guarded git status command.",
+          ),
+        );
+      }
+
+      const requestsBrowserSearch = includesAny(taskInput, ["open browser search", "search in browser", "打开浏览器搜索", "浏览器搜索"]);
+
+      if (
+        !requestsBrowserSearch &&
+        includesAny(taskInput, ["open browser", "open html", "preview html", "run html", "浏览器", "打开页面"])
+      ) {
+        plannedToolCalls.push(
+          buildPlannedToolCall(
+            "open_browser",
+            "medium",
+            {
+              path: "workspaces/demo/generated.html",
+            },
+            "Open the generated html file in the default browser.",
+          ),
+        );
+      }
+
+      if (includesAny(taskInput, ["web search", "search web", "search online", "搜一下", "网页搜索", "搜索网页"])) {
+        plannedToolCalls.push(
+          buildPlannedToolCall(
+            "web_search",
+            "medium",
+            {
+              query: deriveSearchQuery(context.task.input),
+              limit: 5,
+            },
+            "Search the web for up-to-date external information.",
+          ),
+        );
+      }
+
+      if (requestsBrowserSearch) {
+        plannedToolCalls.push(
+          buildPlannedToolCall(
+            "open_browser_search",
+            "medium",
+            {
+              query: deriveSearchQuery(context.task.input),
+            },
+            "Open the search query in the default browser.",
           ),
         );
       }
@@ -233,6 +340,8 @@ export function createAiSdkRunnerProvider(options: AiSdkRunnerProviderOptions = 
         "You are planning tool usage for a coding agent runtime.",
         "Return only tool calls that exist in the allowed tool list.",
         "Prefer the minimum number of tool calls needed to answer the task.",
+        "Write generated preview artifacts under workspaces/demo unless the user explicitly names another workspace path.",
+        "open_browser only accepts html files inside workspaces/demo.",
         `Task: ${context.task.input}`,
         `Allowed tools:\n${toolList}`,
         `Workspace root: ${context.workspace.root}`,
@@ -295,6 +404,8 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
         "You are planning tool usage for a coding agent runtime.",
         "Return only tool calls that exist in the allowed tool list.",
         "Prefer the minimum number of tool calls needed to answer the task.",
+        "Write generated preview artifacts under workspaces/demo unless the user explicitly names another workspace path.",
+        "open_browser only accepts html files inside workspaces/demo.",
         `Task: ${context.task.input}`,
         `Allowed tools:\n${toolList}`,
         `Workspace root: ${context.workspace.root}`,
@@ -475,6 +586,76 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
               toolSummaries.push(summary);
               if (!summary.ok) {
                 throw new Error(summary.error ?? "git_diff failed");
+              }
+              return summary.result;
+            },
+          }),
+          open_browser: defineTool({
+            description: "Open a workspace html file from workspaces/demo in the default browser.",
+            inputSchema: z.object({
+              path: z.string().describe("Relative path to a workspaces/demo html file."),
+            }),
+            execute: async (input) => {
+              const availableTool = toolMap.get("open_browser");
+              if (!availableTool) {
+                throw new Error("Tool registry is missing open_browser.");
+              }
+              const summary = await helpers.executeToolCall({
+                toolName: "open_browser",
+                permission: availableTool.permission,
+                args: normalizePlannedToolArgs("open_browser", input),
+                reason: "Model-selected tool call.",
+              });
+              toolSummaries.push(summary);
+              if (!summary.ok) {
+                throw new Error(summary.error ?? "open_browser failed");
+              }
+              return summary.result;
+            },
+          }),
+          web_search: defineTool({
+            description: "Search the web and return structured search results.",
+            inputSchema: z.object({
+              query: z.string().describe("Search query string."),
+              limit: z.number().int().min(1).max(10).default(5).describe("Maximum number of results."),
+            }),
+            execute: async (input) => {
+              const availableTool = toolMap.get("web_search");
+              if (!availableTool) {
+                throw new Error("Tool registry is missing web_search.");
+              }
+              const summary = await helpers.executeToolCall({
+                toolName: "web_search",
+                permission: availableTool.permission,
+                args: normalizePlannedToolArgs("web_search", input),
+                reason: "Model-selected tool call.",
+              });
+              toolSummaries.push(summary);
+              if (!summary.ok) {
+                throw new Error(summary.error ?? "web_search failed");
+              }
+              return summary.result;
+            },
+          }),
+          open_browser_search: defineTool({
+            description: "Open a web search query in the default browser.",
+            inputSchema: z.object({
+              query: z.string().describe("Search query string."),
+            }),
+            execute: async (input) => {
+              const availableTool = toolMap.get("open_browser_search");
+              if (!availableTool) {
+                throw new Error("Tool registry is missing open_browser_search.");
+              }
+              const summary = await helpers.executeToolCall({
+                toolName: "open_browser_search",
+                permission: availableTool.permission,
+                args: normalizePlannedToolArgs("open_browser_search", input),
+                reason: "Model-selected tool call.",
+              });
+              toolSummaries.push(summary);
+              if (!summary.ok) {
+                throw new Error(summary.error ?? "open_browser_search failed");
               }
               return summary.result;
             },

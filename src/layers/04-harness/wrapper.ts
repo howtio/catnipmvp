@@ -4,7 +4,7 @@ import { createId } from "../../shared/utils/createId.js";
 import { TimeoutError } from "../../shared/errors/TimeoutError.js";
 
 const DEFAULT_LIMITS = {
-  runTimeoutMs: 60_000,
+  runTimeoutMs: 180_000,
 };
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {

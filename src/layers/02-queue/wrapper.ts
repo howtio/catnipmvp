@@ -6,6 +6,35 @@ export function createQueueLayer(): QueueLayerApi {
   const tasks = new Map<string, RunTask>();
   const waiters = new Map<string, Array<(snapshot: QueueTaskSnapshot) => void>>();
   const dequeueWaiters: Array<(task: RunTask) => void> = [];
+  const listeners = new Set<(snapshot: QueueTaskSnapshot) => void>();
+
+  function buildSnapshot(task: RunTask): QueueTaskSnapshot {
+    return {
+      task: { ...task },
+      status: task.status,
+      queueDepth: queue.length,
+      pendingCount: queue.length,
+    };
+  }
+
+  function notifyTask(task: RunTask): void {
+    const snapshot = buildSnapshot(task);
+    for (const listener of listeners) {
+      listener(snapshot);
+    }
+  }
+
+  function refreshPendingPositions(): void {
+    for (const [index, task] of queue.entries()) {
+      const nextPosition = index + 1;
+      if (task.queuePosition === nextPosition) {
+        continue;
+      }
+      task.queuePosition = nextPosition;
+      task.updatedAt = new Date().toISOString();
+      notifyTask(task);
+    }
+  }
 
   function notifyIfCompleted(task: RunTask): void {
     if (task.status !== "done" && task.status !== "failed") {
@@ -17,10 +46,7 @@ export function createQueueLayer(): QueueLayerApi {
       return;
     }
 
-    const snapshot: QueueTaskSnapshot = {
-      task: { ...task },
-      status: task.status,
-    };
+    const snapshot = buildSnapshot(task);
 
     waiters.delete(task.id);
     for (const listener of listeners) {
@@ -30,22 +56,46 @@ export function createQueueLayer(): QueueLayerApi {
 
   return {
     async enqueue(task: RunTask): Promise<void> {
-      const storedTask = { ...task };
+      const now = new Date().toISOString();
+      const storedTask = {
+        ...task,
+        updatedAt: task.updatedAt ?? now,
+        queueEnteredAt: task.queueEnteredAt ?? now,
+      };
       tasks.set(storedTask.id, storedTask);
       const nextWaiter = dequeueWaiters.shift();
       if (nextWaiter) {
+        storedTask.queuePosition = 0;
+        storedTask.updatedAt = new Date().toISOString();
+        notifyTask(storedTask);
         nextWaiter(storedTask);
         return;
       }
 
       queue.push(storedTask);
+      storedTask.queuePosition = queue.length;
+      storedTask.updatedAt = new Date().toISOString();
+      notifyTask(storedTask);
     },
     async dequeue(): Promise<RunTask | undefined> {
-      return queue.shift();
+      const task = queue.shift();
+      if (!task) {
+        return undefined;
+      }
+
+      task.queuePosition = 0;
+      task.updatedAt = new Date().toISOString();
+      notifyTask(task);
+      refreshPendingPositions();
+      return task;
     },
     async waitForTask(): Promise<RunTask> {
       const nextTask = queue.shift();
       if (nextTask) {
+        nextTask.queuePosition = 0;
+        nextTask.updatedAt = new Date().toISOString();
+        notifyTask(nextTask);
+        refreshPendingPositions();
         return nextTask;
       }
 
@@ -61,6 +111,14 @@ export function createQueueLayer(): QueueLayerApi {
 
       Object.assign(task, patch);
       task.status = status;
+      task.updatedAt = new Date().toISOString();
+      if (status === "running") {
+        task.queuePosition = 0;
+      }
+      if (status === "done" || status === "failed") {
+        task.queuePosition = 0;
+      }
+      notifyTask(task);
       notifyIfCompleted(task);
     },
     getStatus(taskId: string): RunTaskStatus | undefined {
@@ -77,10 +135,7 @@ export function createQueueLayer(): QueueLayerApi {
       }
 
       if (task.status === "done" || task.status === "failed") {
-        return {
-          task: { ...task },
-          status: task.status,
-        };
+        return buildSnapshot(task);
       }
 
       return new Promise<QueueTaskSnapshot>((resolve) => {
@@ -88,6 +143,12 @@ export function createQueueLayer(): QueueLayerApi {
         listeners.push(resolve);
         waiters.set(taskId, listeners);
       });
+    },
+    subscribe(listener: (snapshot: QueueTaskSnapshot) => void): () => void {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
     },
     size(): number {
       return queue.length;

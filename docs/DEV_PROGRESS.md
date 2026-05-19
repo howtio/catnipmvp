@@ -65,6 +65,19 @@
 - 完成 Harness run 级超时包装与 `TimeoutError` 失败分类
 - 完成运行限制环境变量：`CATNIP_RUNNER_MAX_STEPS`、`CATNIP_RUNNER_MAX_TOOL_RETRIES`、`CATNIP_RUNNER_CONTINUE_ON_TOOL_ERROR`、`CATNIP_RUN_TIMEOUT_MS`
 - 完成超时与运行限制测试：`tests/harness.test.ts`、`tests/runner.test.ts`
+- 完成队列动态状态观测：`queuePosition`、`updatedAt`、`queue.subscribe`
+- 完成 CLI 队列等待显示：`[queue]` 待处理位置、`[wait]` 等待时间、结果页 `queueWaitMs / totalDurationMs`
+- 完成 CLI 更像 coding agent 的改动回显：`write_file` 预览、`patch_file` 替换摘要、交互提示改为 `codex@catnip>`
+- 完成 Worker 失败分类透传：`failureKind=timeout|runtime`
+- 将默认运行超时从 `60000` 提升到 `180000`
+- 完成新增测试：`tests/queue.test.ts`、`tests/gateway.test.ts`、`tests/worker.test.ts`、`tests/tools.test.ts`
+- 完成浏览器预览工具：`open_browser`
+- 完成浏览器预览 guard：仅允许 `workspaces/demo/*.html`
+- 完成 runner HTML 预览链路：`write_file -> open_browser`
+- 完成网络搜索工具：`web_search`
+- 完成浏览器搜索工具：`open_browser_search`
+- 完成 runner 搜索链路：`web_search -> open_browser_search`
+- 固化 GitHub 主线命名规则：当前主线名 `catnipent 1.0`
 - 强化主施工文档：新增每次开工前与每次收尾强制清单
 - 强化主施工文档：明确每轮代码开发都必须检查日志、push 与回滚判断
 - 强化主施工文档：默认每次开发完成后上传，并持续明确回滚规则
@@ -93,6 +106,9 @@
 - `node dist/src/main.js --task "readme and git diff" --task "shell status"` 通过
 - `CATNIP_WORKER_COUNT=2 CATNIP_CLI_DEBUG=1 node dist/src/main.js --task "readme and git diff" --task "shell status"` 通过
 - `CATNIP_RUN_TIMEOUT_MS=12000 CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js "帮我用王小波的风格写一下被掩埋的巨人"` 通过，并确认输出 `[timer]`
+- `node dist/src/main.js "readme and git diff"` 通过，并确认输出队列等待、计时心跳和结果页等待时长
+- `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "create file html and open browser run html"` 通过
+- `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "web search latest catnip agent runtime and open browser search"` 通过
 
 ### 未开始
 

@@ -14,6 +14,9 @@
 - `write_file`
 - `patch_file`
 - `shell_exec`
+- `open_browser`
+- `web_search`
+- `open_browser_search`
 
 ### medium
 
@@ -24,10 +27,16 @@
 - `write_file`
 - `patch_file`
 - `git_diff`
+- `open_browser`
+- `web_search`
+- `open_browser_search`
 
 受限允许：
 
 - `shell_exec`
+- `open_browser`
+- `web_search`
+- `open_browser_search`
 
 允许命令白名单：
 
@@ -40,6 +49,19 @@
 - `git diff`
 - `ls`
 - `cat`
+
+浏览器预览限制：
+
+- `open_browser` 仅允许打开 `workspaces/demo/` 下的 `.html/.htm` 文件
+- 不允许直接打开 workspace 任意文件
+- 不允许借此执行任意 shell 命令
+
+搜索工具限制：
+
+- `web_search` 仅允许传入文本查询词和受限 `limit`
+- `web_search` 当前通过 DuckDuckGo HTML 返回结构化结果
+- `open_browser_search` 仅允许把查询词交给默认搜索引擎打开
+- 不允许把 `open_browser_search` 当成任意 URL 打开器
 
 ### high
 

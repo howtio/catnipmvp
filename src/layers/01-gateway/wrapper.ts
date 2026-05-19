@@ -6,6 +6,7 @@ import { stdin as input, stdout as output } from "node:process";
 import { readFile } from "node:fs/promises";
 import { once } from "node:events";
 import type { EventBusEvent } from "../08-eventbus/index.js";
+import type { QueueTaskSnapshot } from "../02-queue/index.js";
 
 interface ParsedCliArgs {
   showHelp: boolean;
@@ -22,7 +23,11 @@ interface CliRunResult {
   finalAnswer?: string;
   stepsUsed?: number;
   toolSummaryCount?: number;
+  queueWaitMs?: number;
+  totalDurationMs?: number;
   durationMs?: number;
+  failureKind?: "timeout" | "runtime";
+  errorMessage?: string;
   ok?: boolean;
 }
 
@@ -40,6 +45,50 @@ interface ActiveInteractiveTask {
 
 const FOLLOW_UP_ANSWER_PREVIEW_LIMIT = 1200;
 const RUN_TIMER_INTERVAL_MS = 5000;
+const PINK_ANSI = "\u001b[38;5;213m";
+const GREEN_ANSI = "\u001b[32m";
+const YELLOW_ANSI = "\u001b[33m";
+const RESET_ANSI = "\u001b[0m";
+const INTERACTIVE_PROMPT = "catnip> ";
+
+export function buildCliStartupBanner(): string {
+  const cat = [
+    "                         /\\___/\\\\",
+    "                        /  o o  \\\\",
+    "                       /    ^    \\\\",
+    "                      /  /     \\\\  \\\\",
+    "                     /__/|     |\\\\__\\\\",
+    "                        |  ___  |",
+    "                        | /   \\\\ |",
+    "                        | |   | |",
+    "                        | |   | |",
+    "                        |_|   |_|",
+    "                       /_/     \\_\\\\",
+    "                      (__)     (__)",
+  ].join("\n");
+
+  return `${PINK_ANSI}${cat}\nWelcome to Catnip${RESET_ANSI}`;
+}
+
+export function getInteractivePrompt(): string {
+  return INTERACTIVE_PROMPT;
+}
+
+function colorizeLine(color: string, line: string): string {
+  return `${color}${line}${RESET_ANSI}`;
+}
+
+function colorizePink(line: string): string {
+  return colorizeLine(PINK_ANSI, line);
+}
+
+function colorizeGreen(line: string): string {
+  return colorizeLine(GREEN_ANSI, line);
+}
+
+function colorizeYellow(line: string): string {
+  return colorizeLine(YELLOW_ANSI, line);
+}
 
 export function parseCliArgs(argv: string[]): ParsedCliArgs {
   const positionals: string[] = [];
@@ -248,6 +297,10 @@ function formatElapsedSeconds(durationMs: number): string {
   return `${Math.max(0, Math.round(durationMs / 1000))}s`;
 }
 
+function formatWaitSeconds(durationMs: number): string {
+  return `${Math.max(0, Math.round(durationMs / 1000))}s`;
+}
+
 export function formatRunTimerLine(
   taskLabel: string,
   elapsedMs: number,
@@ -255,6 +308,11 @@ export function formatRunTimerLine(
   lastActivity: string,
 ): string {
   return `[timer] ${taskLabel} elapsed=${formatElapsedSeconds(elapsedMs)} idle=${formatElapsedSeconds(idleMs)} last=${truncateText(lastActivity, 80)}`;
+}
+
+export function formatQueueTimerLine(taskLabel: string, waitedMs: number, queuePosition?: number): string {
+  const positionSuffix = typeof queuePosition === "number" && queuePosition > 0 ? ` pos=${queuePosition}` : "";
+  return `[wait] ${taskLabel} waited=${formatWaitSeconds(waitedMs)}${positionSuffix}`;
 }
 
 function previewText(value: unknown, maxLength = 120): string | undefined {
@@ -310,6 +368,12 @@ function formatToolRequest(toolName: string, args: unknown): string {
       const command = typeof input.command === "string" ? input.command : "(missing command)";
       return `cmd ${formatCommand([command, ...argv])}`;
     }
+    case "open_browser":
+      return `open ${typeof input.path === "string" ? input.path : "(missing path)"}`;
+    case "web_search":
+      return `web ${typeof input.query === "string" ? truncateText(input.query, 80) : "(missing query)"}`;
+    case "open_browser_search":
+      return `search ${typeof input.query === "string" ? truncateText(input.query, 80) : "(missing query)"}`;
     case "git_diff":
       return "cmd git diff --no-ext-diff --minimal";
     default:
@@ -345,11 +409,20 @@ function formatToolResult(toolName: string, result: unknown): string {
     case "write_file": {
       const path = typeof output.path === "string" ? output.path : "(unknown path)";
       const bytesWritten = typeof output.bytesWritten === "number" ? output.bytesWritten : 0;
-      return `wrote ${path} bytes=${bytesWritten}`;
+      const created = output.created === true ? "created" : "updated";
+      const preview = previewText(output.preview, 80);
+      return preview
+        ? `${created} ${path} bytes=${bytesWritten} changed="${preview}"`
+        : `${created} ${path} bytes=${bytesWritten}`;
     }
     case "patch_file": {
       const path = typeof output.path === "string" ? output.path : "(unknown path)";
       const replacements = typeof output.replacements === "number" ? output.replacements : 0;
+      const searchPreview = previewText(output.search, 40);
+      const replacePreview = previewText(output.replace, 40);
+      if (searchPreview && replacePreview) {
+        return `patched ${path} replacements=${replacements} "${searchPreview}" -> "${replacePreview}"`;
+      }
       return `patched ${path} replacements=${replacements}`;
     }
     case "shell_exec": {
@@ -369,6 +442,26 @@ function formatToolResult(toolName: string, result: unknown): string {
     case "git_diff": {
       const preview = previewText(output.output, 100);
       return preview ? `git diff preview="${preview}"` : "git diff completed";
+    }
+    case "open_browser": {
+      const path = typeof output.path === "string" ? output.path : "(unknown path)";
+      const command = typeof output.command === "string" ? output.command : "browser";
+      return `opened ${path} via ${command}`;
+    }
+    case "web_search": {
+      const query = typeof output.query === "string" ? output.query : "(unknown query)";
+      const results = Array.isArray(output.results) ? output.results : [];
+      const firstTitle = results
+        .map((entry) => (isRecord(entry) && typeof entry.title === "string" ? entry.title : undefined))
+        .find((entry): entry is string => typeof entry === "string");
+      return firstTitle
+        ? `searched "${truncateText(query, 50)}" results=${results.length} first="${truncateText(firstTitle, 70)}"`
+        : `searched "${truncateText(query, 50)}" results=${results.length}`;
+    }
+    case "open_browser_search": {
+      const query = typeof output.query === "string" ? output.query : "(unknown query)";
+      const command = typeof output.command === "string" ? output.command : "browser";
+      return `opened search "${truncateText(query, 50)}" via ${command}`;
     }
     default:
       return `${toolName} result=${truncateText(formatDebugPayload(result), 100)}`;
@@ -390,6 +483,8 @@ function setupCliEventPrinter(
   const trackedTasks = new Map<string, TrackedCliTask>();
   const runToTask = new Map<string, string>();
   const toolCalls = new Map<string, { runId: string; toolName: string; args: unknown }>();
+  const latestQueueSnapshots = new Map<string, QueueTaskSnapshot>();
+  const taskWaitTimers = new Map<string, NodeJS.Timeout>();
   const runTimers = new Map<string, {
     startedAtMs: number;
     lastActivityAtMs: number;
@@ -411,6 +506,16 @@ function setupCliEventPrinter(
     timer.lastActivity = activity;
   }
 
+  function stopTaskWaitTimer(taskId: string): void {
+    const timer = taskWaitTimers.get(taskId);
+    if (!timer) {
+      return;
+    }
+
+    clearInterval(timer);
+    taskWaitTimers.delete(taskId);
+  }
+
   function stopRunTimer(runId: string): void {
     const timer = runTimers.get(runId);
     if (!timer) {
@@ -430,6 +535,64 @@ function setupCliEventPrinter(
   }
 
   const unsubscribers = [
+    deps.queue.subscribe((snapshot) => {
+      const task = trackedTasks.get(snapshot.task.id);
+      if (!task) {
+        return;
+      }
+      latestQueueSnapshots.set(snapshot.task.id, snapshot);
+
+      const createdAtMs = Date.parse(snapshot.task.createdAt);
+      const now = Date.now();
+      const waitedMs = Number.isNaN(createdAtMs) ? 0 : Math.max(0, now - createdAtMs);
+
+      if (snapshot.status === "pending") {
+        if (typeof snapshot.task.queuePosition !== "number" || snapshot.task.queuePosition <= 0) {
+          return;
+        }
+        if (!taskWaitTimers.has(snapshot.task.id)) {
+          const interval = setInterval(() => {
+            const trackedTask = trackedTasks.get(snapshot.task.id);
+            const latestSnapshot = latestQueueSnapshots.get(snapshot.task.id);
+            if (!trackedTask || !latestSnapshot) {
+              stopTaskWaitTimer(snapshot.task.id);
+              return;
+            }
+            const taskState = latestSnapshot.task;
+            const queuedAtMs = Date.parse(taskState.createdAt);
+            const elapsedMs = Number.isNaN(queuedAtMs) ? 0 : Math.max(0, Date.now() - queuedAtMs);
+            console.log(
+              colorizePink(
+                formatQueueTimerLine(
+                  formatTaskLabel(trackedTask),
+                  elapsedMs,
+                  typeof taskState.queuePosition === "number" ? taskState.queuePosition : undefined,
+                ),
+              ),
+            );
+          }, RUN_TIMER_INTERVAL_MS);
+          interval.unref?.();
+          taskWaitTimers.set(snapshot.task.id, interval);
+        }
+        console.log(
+          colorizePink(
+            `[queue] ${formatTaskLabel(task)} pending pos=${snapshot.task.queuePosition ?? "?"}/${snapshot.queueDepth} waited=${formatWaitSeconds(waitedMs)}`,
+          ),
+        );
+        return;
+      }
+
+      stopTaskWaitTimer(snapshot.task.id);
+      if (snapshot.status === "running") {
+        console.log(colorizePink(`[queue] ${formatTaskLabel(task)} dispatched waited=${formatWaitSeconds(waitedMs)}`));
+        return;
+      }
+
+      if (snapshot.status === "failed") {
+        const kind = snapshot.task.failureKind ?? "runtime";
+        console.log(`[queue] ${formatTaskLabel(task)} failed kind=${kind}`);
+      }
+    }),
     deps.eventbus.subscribe("run.started", (event) => {
       const eventSessionId = readEventField(event, "sessionId");
       const taskId = readEventField(event, "taskId");
@@ -441,6 +604,7 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
+      stopTaskWaitTimer(taskId);
       const startedAtMs = Date.now();
       const interval = setInterval(() => {
         const timer = runTimers.get(runId);
@@ -531,7 +695,7 @@ function setupCliEventPrinter(
       }
       const planSummary = summarizePlan(readEventField(event, "plannedToolCalls"));
       updateRunActivity(runId, `plan ${planSummary}`);
-      console.log(`[plan] ${formatTaskLabel(task)} ${planSummary}`);
+      console.log(colorizeYellow(`[plan] ${formatTaskLabel(task)} ${planSummary}`));
       printDebug(event);
     }),
     deps.eventbus.subscribe("agent.reasoning.summary", (event) => {
@@ -589,7 +753,7 @@ function setupCliEventPrinter(
       toolCalls.set(toolCallId, { runId, toolName, args });
       const activity = formatToolRequest(toolName, args);
       updateRunActivity(runId, `act ${activity}`);
-      console.log(`[act] ${formatTaskLabel(task)} ${activity}`);
+      console.log(colorizeGreen(`[act] ${formatTaskLabel(task)} ${activity}`));
       printDebug(event);
     }),
     deps.eventbus.subscribe("tool.call.result", (event) => {
@@ -612,7 +776,7 @@ function setupCliEventPrinter(
       }
       const activity = formatToolResult(toolCall.toolName, result);
       updateRunActivity(toolCall.runId, `done ${activity}`);
-      console.log(`[done] ${formatTaskLabel(task)} ${activity}`);
+      console.log(colorizeGreen(`[done] ${formatTaskLabel(task)} ${activity}`));
       toolCalls.delete(toolCallId);
       printDebug(event);
     }),
@@ -674,6 +838,7 @@ function setupCliEventPrinter(
         return;
       }
       stopRunTimer(runId);
+      stopTaskWaitTimer(taskId);
       console.log(`[run] finished ${formatTaskLabel(task)} success=${formatDebugPayload(success)}`);
       runToTask.delete(runId);
       printDebug(event);
@@ -683,6 +848,11 @@ function setupCliEventPrinter(
   return {
     trackTask,
     teardown() {
+      latestQueueSnapshots.clear();
+      for (const timer of taskWaitTimers.values()) {
+        clearInterval(timer);
+      }
+      taskWaitTimers.clear();
       for (const timer of runTimers.values()) {
         clearInterval(timer.interval);
       }
@@ -698,6 +868,9 @@ function printRunResult(result: CliRunResult): void {
   if (result.runId) {
     console.log(`[gateway] runId: ${result.runId}`);
   }
+  if (typeof result.queueWaitMs === "number") {
+    console.log(`[gateway] queueWaitMs: ${result.queueWaitMs}`);
+  }
   if (typeof result.stepsUsed === "number") {
     console.log(`[gateway] steps: ${result.stepsUsed}`);
   }
@@ -705,7 +878,16 @@ function printRunResult(result: CliRunResult): void {
     console.log(`[gateway] tool summaries: ${result.toolSummaryCount}`);
   }
   if (typeof result.durationMs === "number") {
-    console.log(`[gateway] durationMs: ${result.durationMs}`);
+    console.log(`[gateway] runDurationMs: ${result.durationMs}`);
+  }
+  if (typeof result.totalDurationMs === "number") {
+    console.log(`[gateway] totalDurationMs: ${result.totalDurationMs}`);
+  }
+  if (!result.ok && result.failureKind) {
+    console.log(`[gateway] failureKind: ${result.failureKind}`);
+  }
+  if (!result.ok && result.errorMessage) {
+    console.log(`[gateway] error: ${result.errorMessage}`);
   }
   if (result.finalAnswer) {
     console.log("");
@@ -727,7 +909,7 @@ function printHistory(history: CliRunResult[]): void {
       : "no final answer";
     const suffix = answerPreview.length === 80 ? "..." : "";
     console.log(
-      `${index + 1}. task=${entry.taskId} run=${entry.runId ?? "n/a"} steps=${entry.stepsUsed ?? 0} answer=${answerPreview}${suffix}`,
+      `${index + 1}. task=${entry.taskId} run=${entry.runId ?? "n/a"} wait=${entry.queueWaitMs ?? 0}ms steps=${entry.stepsUsed ?? 0} answer=${answerPreview}${suffix}`,
     );
   }
 }
@@ -786,14 +968,28 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
   async function waitForTaskResult(task: RunTask): Promise<CliRunResult> {
     const result = await deps.queue.waitForCompletion(task.id);
     const durationMs = formatDurationMs(result.task);
+    const queueWaitMs =
+      result.task.startedAt && result.task.createdAt
+        ? Math.max(0, Date.parse(result.task.startedAt) - Date.parse(result.task.createdAt))
+        : undefined;
+    const totalDurationMs =
+      result.task.finishedAt && result.task.createdAt
+        ? Math.max(0, Date.parse(result.task.finishedAt) - Date.parse(result.task.createdAt))
+        : undefined;
     if (result.status === "failed") {
       console.error(`[gateway] task ${task.id} failed: ${result.task.errorMessage ?? "unknown error"}`);
       process.exitCode = 1;
-      return buildCliRunResult(task.id, {
+      const cliRunResult = buildCliRunResult(task.id, {
         taskInput: task.input,
         ok: false,
+        ...(result.task.failureKind ? { failureKind: result.task.failureKind } : {}),
+        ...(result.task.errorMessage ? { errorMessage: result.task.errorMessage } : {}),
+        ...(typeof queueWaitMs === "number" ? { queueWaitMs } : {}),
         ...(typeof durationMs === "number" ? { durationMs } : {}),
+        ...(typeof totalDurationMs === "number" ? { totalDurationMs } : {}),
       });
+      printRunResult(cliRunResult);
+      return cliRunResult;
     }
 
     console.log(`[gateway] task ${task.id} completed`);
@@ -806,7 +1002,9 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
       ...(typeof result.task.toolSummaryCount === "number"
         ? { toolSummaryCount: result.task.toolSummaryCount }
         : {}),
+      ...(typeof queueWaitMs === "number" ? { queueWaitMs } : {}),
       ...(typeof durationMs === "number" ? { durationMs } : {}),
+      ...(typeof totalDurationMs === "number" ? { totalDurationMs } : {}),
     });
     printRunResult(cliRunResult);
     return cliRunResult;
@@ -883,10 +1081,11 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
     let activeTask: ActiveInteractiveTask | undefined;
     let exitRequested = false;
 
+    console.log(buildCliStartupBanner());
     console.log("Catnip interactive CLI");
     console.log("Type your task and press Enter. Use /help, /history, /last, /clear or /exit.");
     console.log("While a task is running, extra input is captured as follow-up refinements for the next turn.");
-    rl.setPrompt("catnip> ");
+    rl.setPrompt(getInteractivePrompt());
     rl.prompt();
 
     try {

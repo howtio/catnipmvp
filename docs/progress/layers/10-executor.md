@@ -161,3 +161,67 @@
 ### 下一步
 
 - 在后续阶段继续强化 commandGuard 与执行审计
+
+## 2026-05-19 / Executor / 增加受限浏览器预览执行
+
+### 当前目标
+
+让工具链至少能在写完 html 后打开浏览器预览，同时不放开任意 shell。
+
+### 本次完成
+
+- 新增 `open_browser` 执行能力
+- 按平台选择默认打开命令：Linux `xdg-open`、macOS `open`、Windows `cmd /c start`
+- 支持 `CATNIP_BROWSER_OPEN_BIN` 覆盖打开命令，便于测试
+- guard 限制 `open_browser` 仅允许 `.html/.htm`
+- guard 限制 `open_browser` 仅允许 `workspaces/demo/`
+- 新增 guard 测试与工具执行测试
+
+### 当前状态
+
+- 已完成：最小 html 浏览器预览闭环
+- 进行中：仍是单文件预览，不负责起 HTTP 服务
+- 未完成：dev server 生命周期、浏览器关闭/复用、打开结果回执细化
+
+### 风险与阻塞
+
+- 默认依赖本机存在 `xdg-open` 或对应平台打开命令
+- 当前只验证“命令已发起”，不验证浏览器页面是否实际渲染成功
+
+### 下一步
+
+- 可继续补静态服务器工具
+- 或补 headless 浏览器验收
+
+## 2026-05-19 / Executor / 增加受限网页搜索执行
+
+### 当前目标
+
+让工具层具备最小外部搜索能力，同时保留受限浏览器搜索入口，不放开任意 URL 或任意网络命令。
+
+### 本次完成
+
+- 新增 `web_search` 执行能力
+- `web_search` 通过 DuckDuckGo HTML 发起搜索
+- `web_search` 返回 `query / engine / results`
+- 新增 `open_browser_search` 执行能力
+- `open_browser_search` 只生成搜索 URL 并调用默认浏览器打开
+- guard 为 `web_search` 增加 `query` 与 `limit` 校验
+- guard 为 `open_browser_search` 增加查询词校验
+- 新增对应 guard 与执行测试
+
+### 当前状态
+
+- 已完成：最小网页搜索与浏览器搜索闭环
+- 进行中：搜索结果字段仍较精简
+- 未完成：多搜索引擎、超时/重试、结果去重
+
+### 风险与阻塞
+
+- `web_search` 依赖外部搜索页面结构，后续可能需要适配
+- 当前没有单独的网络超时配置
+
+### 下一步
+
+- 可继续补网络超时与失败分类
+- 或补结果摘要与来源字段

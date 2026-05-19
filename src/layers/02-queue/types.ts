@@ -3,6 +3,8 @@ import type { RunTask, RunTaskStatus } from "../../shared/types/runTask.js";
 export interface QueueTaskSnapshot {
   task: RunTask;
   status: RunTaskStatus;
+  queueDepth: number;
+  pendingCount: number;
 }
 
 export interface QueueLayerApi {
@@ -13,5 +15,6 @@ export interface QueueLayerApi {
   getStatus(taskId: string): RunTaskStatus | undefined;
   getTask(taskId: string): RunTask | undefined;
   waitForCompletion(taskId: string): Promise<QueueTaskSnapshot>;
+  subscribe(listener: (snapshot: QueueTaskSnapshot) => void): () => void;
   size(): number;
 }

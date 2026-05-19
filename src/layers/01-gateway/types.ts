@@ -6,6 +6,7 @@ export interface GatewayLayerDeps {
   queue: {
     enqueue(task: RunTask): Promise<void>;
     waitForCompletion(taskId: string): Promise<QueueTaskSnapshot>;
+    subscribe(listener: (snapshot: QueueTaskSnapshot) => void): () => void;
   };
   eventbus?: {
     subscribe(eventType: string, listener: (event: EventBusEvent) => void): () => void;

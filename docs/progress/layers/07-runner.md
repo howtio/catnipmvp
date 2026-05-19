@@ -256,6 +256,68 @@
 
 - 在后续阶段补 step 上限、超时和失败恢复策略
 
+## 2026-05-19 / Runner / 增加 HTML 预览工具规划
+
+### 当前目标
+
+让 Runner 不只会写文件，还能在 HTML 场景下继续规划“打开浏览器预览”这一步。
+
+### 本次完成
+
+- `normalizePlannedToolArgs` 新增 `open_browser`
+- heuristic provider 支持识别 `open browser / run html / 浏览器 / 打开页面`
+- heuristic provider 在 HTML 场景下默认写入 `workspaces/demo/generated.html`
+- AI SDK / DeepSeek 计划 prompt 明确预览产物默认放到 `workspaces/demo`
+- DeepSeek tool calling schema 新增 `open_browser`
+- 新增 Runner HTML 预览规划测试
+
+### 当前状态
+
+- 已完成：HTML 预览最小工具规划链路
+- 进行中：真实模型仍可能受提示词质量影响
+- 未完成：更强的页面验收、serve 模式、结果校验
+
+### 风险与阻塞
+
+- 真实模型在自由 tool calling 下仍可能尝试别的路径，需要依赖 guard 拦截
+
+### 下一步
+
+- 可继续补 `serve_static`
+- 或补页面渲染后的自动验收
+
+## 2026-05-19 / Runner / 增加网页搜索工具规划
+
+### 当前目标
+
+让 Runner 能识别“搜索外部网页信息”和“在浏览器里发起搜索”这两类任务，并规划正确工具链。
+
+### 本次完成
+
+- `normalizePlannedToolArgs` 新增 `web_search`
+- `normalizePlannedToolArgs` 新增 `open_browser_search`
+- heuristic provider 支持识别 `web search / 搜一下 / 网页搜索`
+- heuristic provider 支持识别 `open browser search / 打开浏览器搜索`
+- heuristic provider 增加搜索查询词提取
+- DeepSeek tool calling schema 新增 `web_search`
+- DeepSeek tool calling schema 新增 `open_browser_search`
+- 新增 Runner 搜索规划测试
+
+### 当前状态
+
+- 已完成：搜索工具最小规划链路
+- 进行中：搜索查询词提取仍是规则级
+- 未完成：更智能的 query 重写、结果二次筛选
+
+### 风险与阻塞
+
+- query 提取当前仍可能保留部分连接词
+
+### 下一步
+
+- 可继续补 query rewrite
+- 或补基于搜索结果的后续自动读取
+
 ## 2026-05-19 / Debug / 发布计划与步骤摘要事件
 
 ### 当前目标

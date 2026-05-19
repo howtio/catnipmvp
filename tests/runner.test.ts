@@ -44,6 +44,80 @@ test("heuristic runner provider plans multiple tool calls for combined task", as
   );
 });
 
+test("heuristic runner provider can plan write html then open browser", async () => {
+  const provider = createHeuristicRunnerProvider();
+  const plan = await provider.plan({
+    runId: "run_test",
+    task: {
+      id: "task_test",
+      sessionId: "session_test",
+      input: "create file html and open browser run html",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    },
+    docs: {
+      coreDocuments: [],
+    },
+    workspace: {
+      root: "/workspace",
+      topLevelEntries: [],
+      layerDirectories: [],
+    },
+    sessionHistory: [],
+    systemPrompt: "prompt",
+    skills: [],
+    skillNames: [],
+    skillInstructions: "",
+  }, [
+    { name: "write_file", description: "Write file", permission: "medium" },
+    { name: "open_browser", description: "Open browser", permission: "medium" },
+  ]);
+
+  assert.deepEqual(
+    plan.plannedToolCalls.map((step) => step.toolName),
+    ["write_file", "open_browser"],
+  );
+  assert.equal(plan.plannedToolCalls[0]?.args.path, "workspaces/demo/generated.html");
+  assert.equal(plan.plannedToolCalls[1]?.args.path, "workspaces/demo/generated.html");
+});
+
+test("heuristic runner provider can plan web search and browser search", async () => {
+  const provider = createHeuristicRunnerProvider();
+  const plan = await provider.plan({
+    runId: "run_test",
+    task: {
+      id: "task_test",
+      sessionId: "session_test",
+      input: "web search latest catnip agent and open browser search",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    },
+    docs: {
+      coreDocuments: [],
+    },
+    workspace: {
+      root: "/workspace",
+      topLevelEntries: [],
+      layerDirectories: [],
+    },
+    sessionHistory: [],
+    systemPrompt: "prompt",
+    skills: [],
+    skillNames: [],
+    skillInstructions: "",
+  }, [
+    { name: "web_search", description: "Web search", permission: "medium" },
+    { name: "open_browser_search", description: "Open browser search", permission: "medium" },
+  ]);
+
+  assert.deepEqual(
+    plan.plannedToolCalls.map((step) => step.toolName),
+    ["web_search", "open_browser_search"],
+  );
+  assert.equal(plan.plannedToolCalls[0]?.args.query, "latest catnip agent and");
+  assert.equal(plan.plannedToolCalls[1]?.args.query, "latest catnip agent and");
+});
+
 test("summarizeToolOutcome and buildFinalAnswer produce readable output", () => {
   const summary = summarizeToolOutcome(
     {

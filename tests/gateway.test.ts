@@ -1,8 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildCliStartupBanner,
   buildInteractiveFollowUpInput,
+  formatQueueTimerLine,
   formatRunTimerLine,
+  getInteractivePrompt,
   parseCliArgs,
   parseInteractiveCommand,
 } from "../src/layers/01-gateway/wrapper.js";
@@ -74,4 +77,23 @@ test("formatRunTimerLine summarizes elapsed and idle time", () => {
   const line = formatRunTimerLine("1/1 task_test", 12_400, 4_400, "think writing draft");
 
   assert.equal(line, "[timer] 1/1 task_test elapsed=12s idle=4s last=think writing draft");
+});
+
+test("formatQueueTimerLine summarizes waiting time and queue position", () => {
+  const line = formatQueueTimerLine("2/2 task_test", 7_600, 2);
+
+  assert.equal(line, "[wait] 2/2 task_test waited=8s pos=2");
+});
+
+test("getInteractivePrompt keeps catnip-only prompt", () => {
+  assert.equal(getInteractivePrompt(), "catnip> ");
+});
+
+test("buildCliStartupBanner prints a pink cat banner", () => {
+  const banner = buildCliStartupBanner();
+
+  assert.match(banner, /\u001b\[38;5;213m/);
+  assert.match(banner, /Welcome to Catnip/);
+  assert.match(banner, /\/\\___\/\\\\/);
+  assert.ok(banner.split("\n").length >= 10);
 });

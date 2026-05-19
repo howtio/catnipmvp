@@ -1,5 +1,293 @@
 # Construction Log
 
+## 2026-05-19 / CLI / 大号粉猫开机图、彩色时间线与主线命名规则
+
+### 目标
+
+按用户要求调整 CLI 视觉：去掉 `codex` 痕迹、保留 `catnip`，开机显示更大的粉色小猫和 `Welcome`，并给等待、规划、工具调用加颜色；同时把 GitHub 主线命名规则固化为 `catnipent 1.0` 体系并上传。
+
+### 开工检查
+
+- 当前分支：`feat/cli-handtest`
+- 本轮开发前基线提交：`b1af0329b91028dbe429f0f385c5e84076f5519b`
+- 开发前远端备份分支：`backup/pre-cat-banner-color-20260519-1442`
+- 当前工作区存在既有未跟踪文件，已避开，不做覆盖或回滚
+
+### 本次修改
+
+- 交互提示符改为 `catnip> `
+- 启动 banner 改为更大的粉色小猫
+- 启动 banner 增加 `Welcome to Catnip`
+- `[queue]` 与 `[wait]` 等等待输出改为粉色
+- `[plan]` 规划输出改为黄色
+- `[act]` 与 `[done]` 工具调用输出改为绿色
+- README 增加彩色时间线说明
+- 主文档新增 GitHub 主线命名规则
+- 固化当前主线版本名为 `catnipent 1.0`
+- 说明后续大改默认沿用 `catnipent 1.x`
+- 新增 Gateway banner / prompt 测试
+
+### 修改文件
+
+- README.md
+- CODEX_MASTER_REQUIREMENTS.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+- src/layers/01-gateway/wrapper.ts
+- tests/gateway.test.ts
+
+### 验证结果
+
+- `npm test`：通过，39 个测试全部通过
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 如需回滚，可回到开发前基线提交 `b1af0329b91028dbe429f0f385c5e84076f5519b`
+- 暂不执行回滚
+
+### 风险
+
+- 颜色输出依赖终端支持 ANSI
+- 大号 banner 会让交互 CLI 首屏更高
+
+### 下一步
+
+- 可继续补颜色开关
+- 可继续补版本号递增自动化
+
+## 2026-05-19 / Tools / 增加网页搜索与浏览器搜索
+
+### 目标
+
+在现有工具链上继续增加两个正式工具：`web_search` 和 `open_browser_search`，让 Agent 既能程序内搜索外部信息，也能在默认浏览器里直接发起搜索。
+
+### 开工检查
+
+- 当前分支：`feat/cli-handtest`
+- 本轮开发前基线提交：`b1af0329b91028dbe429f0f385c5e84076f5519b`
+- 开发前远端备份分支：`backup/pre-web-search-tools-20260519-1417`
+- 当前工作区存在既有未跟踪文件，已避开，不做覆盖或回滚
+
+### 本次修改
+
+- Tool Registry 新增 `web_search`
+- Tool Registry 新增 `open_browser_search`
+- 工具分类新增 `web`
+- Executor 新增 `web_search` 执行能力
+- `web_search` 通过 DuckDuckGo HTML 拉取搜索页并解析结构化结果
+- Executor 新增 `open_browser_search` 执行能力
+- `open_browser_search` 只拼搜索 URL 并调用默认浏览器打开
+- guard 为 `web_search` 增加 `query` 与 `limit` 校验
+- guard 为 `open_browser_search` 增加查询词校验
+- Runner heuristic 新增搜索关键词规划
+- Runner 新增搜索查询词提取
+- DeepSeek tool calling schema 新增 `web_search`
+- DeepSeek tool calling schema 新增 `open_browser_search`
+- CLI 时间线新增 `web` / `search` 请求与结果摘要
+- 更新 README、Tool Policy、总进度和分层日志
+
+### 修改文件
+
+- README.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/TOOL_POLICY.md
+- docs/progress/layers/01-gateway.md
+- docs/progress/layers/07-runner.md
+- docs/progress/layers/09-tool-registry.md
+- docs/progress/layers/10-executor.md
+- src/layers/01-gateway/wrapper.ts
+- src/layers/07-runner/provider.ts
+- src/layers/09-tool-registry/wrapper.ts
+- src/layers/10-executor/guard.ts
+- src/layers/10-executor/tools.ts
+- src/shared/types/tool.ts
+- tests/guard.test.ts
+- tests/runner.test.ts
+- tests/tools.test.ts
+
+### 验证结果
+
+- `npm test`：通过，37 个测试全部通过
+- `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "web search latest catnip agent runtime and open browser search"`：通过
+- 冒烟确认时间线出现 `web_search -> open_browser_search`
+- 冒烟确认 `web_search` 返回结果摘要，`open_browser_search` 成功发起浏览器搜索
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 如需回滚，可回到开发前基线提交 `b1af0329b91028dbe429f0f385c5e84076f5519b`
+- 暂不执行回滚
+
+### 风险
+
+- `web_search` 当前依赖外部搜索页面结构，后续可能需要适配
+- 当前查询词提取仍是规则级，可能保留部分连接词
+- `open_browser_search` 只保证发起搜索，不验证浏览器页面最终显示状态
+
+### 下一步
+
+- 可继续补 query rewrite
+- 可继续补搜索结果二次读取或摘要
+- 可继续补网络超时和搜索失败分类
+
+## 2026-05-19 / Tools / 写完 html 后打开浏览器预览
+
+### 目标
+
+根据施工文档继续推进工具调用层，至少达到模型可以写完 html 文件后直接调用工具打开浏览器预览。
+
+### 开工检查
+
+- 当前分支：`feat/cli-handtest`
+- 本轮开发前基线提交：`b1af0329b91028dbe429f0f385c5e84076f5519b`
+- 开发前远端备份分支：`backup/pre-browser-open-tool-20260519-1409`
+- 当前工作区存在既有未跟踪文件，已避开，不做覆盖或回滚
+
+### 本次修改
+
+- Tool Registry 新增 `open_browser`
+- `open_browser` 分类为 `browser`
+- Executor 新增 `open_browser` 执行能力
+- `open_browser` 默认按平台调用浏览器打开命令
+- 新增 `CATNIP_BROWSER_OPEN_BIN` 便于测试替换打开命令
+- guard 限制 `open_browser` 仅允许 `.html/.htm`
+- guard 限制 `open_browser` 仅允许 `workspaces/demo/`
+- Runner heuristic 支持 `write_file -> open_browser`
+- Runner provider prompt 明确预览产物默认写入 `workspaces/demo`
+- DeepSeek tool schema 增加 `open_browser`
+- CLI 时间线增加 `open ...` 与 `opened ... via ...` 展示
+- 新增/更新 guard、runner、tools 测试
+- 更新工具策略与分层进度日志
+
+### 修改文件
+
+- README.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/TOOL_POLICY.md
+- docs/progress/layers/09-tool-registry.md
+- docs/progress/layers/10-executor.md
+- src/layers/01-gateway/wrapper.ts
+- src/layers/07-runner/provider.ts
+- src/layers/09-tool-registry/wrapper.ts
+- src/layers/10-executor/guard.ts
+- src/layers/10-executor/tools.ts
+- src/shared/types/tool.ts
+- tests/guard.test.ts
+- tests/runner.test.ts
+- tests/tools.test.ts
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm test`：通过，32 个测试全部通过
+- `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "create file html and open browser run html"`：通过
+- 冒烟确认时间线出现 `write_file -> open_browser`
+- 冒烟确认生成文件路径为 `workspaces/demo/generated.html`
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 如需回滚，可回到开发前基线提交 `b1af0329b91028dbe429f0f385c5e84076f5519b`
+- 暂不执行回滚
+
+### 风险
+
+- 当前只实现“本地 html 文件预览”，未实现本地静态服务器
+- 真实浏览器是否成功显示页面仍依赖宿主机桌面环境
+- 早期一次未受限冒烟曾让模型选择根目录 `index.html`；现已通过 `open_browser` guard 和 provider 提示收紧到 `workspaces/demo/`
+
+### 下一步
+
+- 可继续补 `serve_static` 或 `preview_html` 一体化工具
+- 可继续补对页面渲染结果的自动验收
+
+## 2026-05-19 / Queue + CLI / 队列动态交互、改动摘要与超时放宽
+
+### 目标
+
+严格按施工文档继续下一步开发，优先补齐队列动态交互、CLI 默认可观测性、文件改动摘要展示，并把默认超时约束放宽到更适合长任务的范围。
+
+### 开工检查
+
+- 当前分支：`feat/cli-handtest`
+- 本轮开发前基线提交：`b1af0329b91028dbe429f0f385c5e84076f5519b`
+- 当前工作区存在未跟踪文件，已避开，不做覆盖或回滚
+
+### 本次修改
+
+- Queue 增加任务动态观测字段：`updatedAt`、`queueEnteredAt`、`queuePosition`
+- Queue 增加 `subscribe`
+- Queue 快照增加 `queueDepth`、`pendingCount`
+- Queue 在入队、出队、状态变化后刷新等待位置并通知订阅方
+- Gateway 接入 Queue 订阅并打印默认 `[queue]`
+- Gateway 增加默认 `[wait]` 等待计时线
+- Gateway 结果页增加 `queueWaitMs`
+- Gateway 结果页增加 `totalDurationMs`
+- Gateway 失败结果增加 `failureKind` 和 `error`
+- 交互提示符改为 `codex@catnip>`
+- `write_file` 工具结果增加 `created`
+- `write_file` 工具结果增加 `preview`
+- `patch_file` 工具结果增加 `search`
+- `patch_file` 工具结果增加 `replace`
+- CLI 工具结果格式化直接显示“改了什么”
+- Worker 失败结果补 `failureKind=timeout|runtime`
+- 默认 `CATNIP_RUN_TIMEOUT_MS` 从 `60000` 调整到 `180000`
+- 更新 README、总进度与分层进度日志
+
+### 修改文件
+
+- .env.example
+- README.md
+- src/bootstrap.ts
+- src/layers/01-gateway/types.ts
+- src/layers/01-gateway/wrapper.ts
+- src/layers/02-queue/types.ts
+- src/layers/02-queue/wrapper.ts
+- src/layers/03-worker/wrapper.ts
+- src/layers/04-harness/wrapper.ts
+- src/layers/10-executor/tools.ts
+- src/shared/types/runTask.ts
+- tests/gateway.test.ts
+- tests/queue.test.ts
+- tests/tools.test.ts
+- tests/worker.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+- docs/progress/layers/02-queue.md
+- docs/progress/layers/03-worker.md
+- docs/progress/layers/04-harness.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm test`：通过，27 个测试全部通过
+- `node dist/src/main.js "readme and git diff"`：通过
+- 冒烟确认默认输出可见 `[queue]`、`[wait]`、`[timer]`
+- 冒烟确认结果页可见 `queueWaitMs`、`runDurationMs`、`totalDurationMs`
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 如需回滚，可回到开发前基线提交 `b1af0329b91028dbe429f0f385c5e84076f5519b`
+- 暂不执行回滚
+
+### 风险
+
+- 当前 queue wait 计时仍是 CLI 侧观测，不是 Queue 层主动推送的逐秒事件
+- Harness 超时仍只中断外层等待，不能真正取消底层 provider 请求
+- 多任务下默认输出更密，后续可能需要可折叠或单行刷新模式
+
+### 下一步
+
+- 可继续补 `/interrupt` 或 cancel 语义
+- 可继续补更明确的 changed files 汇总
+- 可继续补 provider 级真实取消与 timeout 传播
+
 ## 2026-05-19 / CLI / 长任务计时心跳
 
 ### 目标

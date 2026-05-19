@@ -98,7 +98,7 @@ export function bootstrapCatnipAgent() {
     eventbus,
     reportLogger: jsonlLogger,
     limits: {
-      runTimeoutMs: readPositiveIntegerEnv("CATNIP_RUN_TIMEOUT_MS", 60_000),
+      runTimeoutMs: readPositiveIntegerEnv("CATNIP_RUN_TIMEOUT_MS", 180_000),
     },
   });
   const queue = createQueueLayer();

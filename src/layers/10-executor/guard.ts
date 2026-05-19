@@ -1,5 +1,5 @@
 import { PolicyError } from "../../shared/errors/PolicyError.js";
-import { resolve } from "node:path";
+import { extname, resolve } from "node:path";
 import type { PermissionLevel } from "../../shared/types/permission.js";
 import type { ToolDefinition } from "../../shared/types/tool.js";
 import type { GuardResult, ToolCallRequest } from "./types.js";
@@ -107,6 +107,47 @@ function ensureShellArgs(args: unknown): void {
   }
 }
 
+function ensureBrowserArgs(args: unknown, workspaceRoot: string): void {
+  if (!isRecord(args)) {
+    throw new PolicyError("open_browser args must be a plain object.");
+  }
+
+  ensurePathInsideWorkspace(workspaceRoot, args.path);
+  if (typeof args.path !== "string") {
+    throw new PolicyError("open_browser path must be a string.");
+  }
+
+  const extension = extname(args.path).toLowerCase();
+  if (extension !== ".html" && extension !== ".htm") {
+    throw new PolicyError("open_browser only allows .html or .htm files.");
+  }
+
+  const normalizedPath = args.path.replaceAll("\\", "/");
+  if (!normalizedPath.startsWith("workspaces/demo/")) {
+    throw new PolicyError("open_browser only allows files inside workspaces/demo/.");
+  }
+}
+
+function ensureSearchQueryArgs(toolName: "web_search" | "open_browser_search", args: unknown): void {
+  if (!isRecord(args)) {
+    throw new PolicyError(`${toolName} args must be a plain object.`);
+  }
+
+  if (typeof args.query !== "string" || args.query.trim().length === 0) {
+    throw new PolicyError(`${toolName} requires a non-empty query string.`);
+  }
+
+  if (args.query.length > 500) {
+    throw new PolicyError(`${toolName} query is too long.`);
+  }
+
+  if (toolName === "web_search" && args.limit !== undefined) {
+    if (typeof args.limit !== "number" || !Number.isInteger(args.limit) || args.limit < 1 || args.limit > 10) {
+      throw new PolicyError("web_search limit must be an integer between 1 and 10.");
+    }
+  }
+}
+
 function ensureToolSpecificArgs(tool: ToolDefinition, args: unknown, workspaceRoot: string): void {
   if (tool.category === "filesystem") {
     ensureFilesystemArgs(tool.name, args, workspaceRoot);
@@ -115,6 +156,16 @@ function ensureToolSpecificArgs(tool: ToolDefinition, args: unknown, workspaceRo
 
   if (tool.name === "shell_exec") {
     ensureShellArgs(args);
+    return;
+  }
+
+  if (tool.name === "open_browser") {
+    ensureBrowserArgs(args, workspaceRoot);
+    return;
+  }
+
+  if (tool.name === "web_search" || tool.name === "open_browser_search") {
+    ensureSearchQueryArgs(tool.name, args);
   }
 }
 

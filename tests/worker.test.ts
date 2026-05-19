@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createQueueLayer } from "../src/layers/02-queue/index.js";
 import { createWorkerLayer } from "../src/layers/03-worker/index.js";
 import type { RunTask } from "../src/shared/types/runTask.js";
+import { TimeoutError } from "../src/shared/errors/TimeoutError.js";
 
 function createTask(id: string, input: string): RunTask {
   return {
@@ -154,4 +155,27 @@ test("worker heartbeat reports pool activity and queue depth", async () => {
   assert.ok(heartbeats.some((event) => event.completedTasks >= 1));
   assert.ok(heartbeats.some((event) => event.activeWorkers === 1 && event.queueDepth === 1));
   assert.ok(heartbeats.some((event) => event.failedTasks === 0));
+});
+
+test("worker marks timeout failures with failure kind", async () => {
+  const queue = createQueueLayer();
+  const worker = createWorkerLayer({
+    queue,
+    harness: {
+      async runTask() {
+        throw new TimeoutError("Run exceeded timeout of 123ms.");
+      },
+    },
+    config: {
+      workerCount: 1,
+      heartbeatIntervalMs: 10,
+    },
+  });
+
+  worker.start();
+  await queue.enqueue(createTask("task_timeout", "slow"));
+  const result = await queue.waitForCompletion("task_timeout");
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.task.failureKind, "timeout");
 });

@@ -149,3 +149,30 @@
 - 可补 shutdown 与测试清理机制
 - 或补每个消费槽位的独立标识和更细粒度日志
 - 或继续补 queue backlog / starvation 观测
+
+## 2026-05-19 / Worker / 透传超时失败分类
+
+### 当前目标
+
+让 Gateway 能分辨普通运行错误和超时错误，不再把所有失败都折叠成一类。
+
+### 本次完成
+
+- Worker 捕获 `TimeoutError`
+- 失败任务状态增加 `failureKind=timeout`
+- 非超时错误归类为 `failureKind=runtime`
+- 新增 Worker 失败分类测试
+
+### 当前状态
+
+- 已完成：失败分类最小透传
+- 进行中：分类仍只有 timeout/runtime 两类
+- 未完成：更细 tool/provider/guard 失败分类
+
+### 风险与阻塞
+
+- 当前失败分类来自 Worker catch 分支，后续若要更细需要 Harness/Runner/Executor 共同补字段
+
+### 下一步
+
+- 可继续补更细失败 taxonomy

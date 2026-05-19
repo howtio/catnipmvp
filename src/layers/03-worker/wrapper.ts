@@ -1,5 +1,6 @@
 import type { WorkerLayerApi, WorkerLayerDeps } from "./types.js";
 import { createId } from "../../shared/utils/createId.js";
+import { TimeoutError } from "../../shared/errors/TimeoutError.js";
 
 const DEFAULT_WORKER_COUNT = 1;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 1000;
@@ -54,6 +55,7 @@ export function createWorkerLayer(deps: WorkerLayerDeps): WorkerLayerApi {
         const errorMessage = error instanceof Error ? error.message : String(error);
         deps.queue.setStatus(task.id, "failed", {
           finishedAt: new Date().toISOString(),
+          failureKind: error instanceof TimeoutError ? "timeout" : "runtime",
           errorMessage,
         });
       } finally {

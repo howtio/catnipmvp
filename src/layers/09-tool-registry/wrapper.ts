@@ -50,6 +50,30 @@ const DEFAULT_TOOLS: ToolDefinition[] = [
     argShape: "object",
     stage: "active",
   },
+  {
+    name: "open_browser",
+    description: "Open a workspace html file from workspaces/demo in the default browser.",
+    permission: "medium",
+    category: "browser",
+    argShape: "object",
+    stage: "active",
+  },
+  {
+    name: "web_search",
+    description: "Search the web and return structured search results.",
+    permission: "medium",
+    category: "web",
+    argShape: "object",
+    stage: "active",
+  },
+  {
+    name: "open_browser_search",
+    description: "Open a web search query in the default browser.",
+    permission: "medium",
+    category: "browser",
+    argShape: "object",
+    stage: "active",
+  },
 ];
 
 export function createToolRegistryLayer(): ToolRegistryLayerApi {
