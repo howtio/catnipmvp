@@ -10,6 +10,20 @@ interface ParsedCliArgs {
   inputText?: string;
 }
 
+interface CliRunResult {
+  taskId: string;
+  runId?: string;
+  finalAnswer?: string;
+  stepsUsed?: number;
+  toolSummaryCount?: number;
+  durationMs?: number;
+}
+
+interface InteractiveCommand {
+  type: "help" | "exit" | "history" | "last" | "clear" | "task";
+  taskInput?: string;
+}
+
 export function parseCliArgs(argv: string[]): ParsedCliArgs {
   const positionals: string[] = [];
   let showHelp = false;
@@ -35,6 +49,35 @@ export function parseCliArgs(argv: string[]): ParsedCliArgs {
     showHelp,
     interactive,
     ...(inputText.length > 0 ? { inputText } : {}),
+  };
+}
+
+export function parseInteractiveCommand(line: string): InteractiveCommand {
+  const trimmed = line.trim();
+
+  if (trimmed === "/help") {
+    return { type: "help" };
+  }
+
+  if (trimmed === "/exit" || trimmed === "/quit") {
+    return { type: "exit" };
+  }
+
+  if (trimmed === "/history") {
+    return { type: "history" };
+  }
+
+  if (trimmed === "/last") {
+    return { type: "last" };
+  }
+
+  if (trimmed === "/clear") {
+    return { type: "clear" };
+  }
+
+  return {
+    type: "task",
+    taskInput: trimmed,
   };
 }
 
@@ -71,11 +114,59 @@ function printHelp(): void {
   console.log("");
   console.log("Interactive commands:");
   console.log("  /help  Show this help");
+  console.log("  /history  Show tasks from this interactive session");
+  console.log("  /last  Show the last final answer again");
+  console.log("  /clear  Clear session history");
   console.log("  /exit  Exit the CLI");
 }
 
+function printRunResult(result: CliRunResult): void {
+  if (result.runId) {
+    console.log(`[gateway] runId: ${result.runId}`);
+  }
+  if (typeof result.stepsUsed === "number") {
+    console.log(`[gateway] steps: ${result.stepsUsed}`);
+  }
+  if (typeof result.toolSummaryCount === "number") {
+    console.log(`[gateway] tool summaries: ${result.toolSummaryCount}`);
+  }
+  if (typeof result.durationMs === "number") {
+    console.log(`[gateway] durationMs: ${result.durationMs}`);
+  }
+  if (result.finalAnswer) {
+    console.log("");
+    console.log("Final answer:");
+    console.log(result.finalAnswer);
+  }
+}
+
+function printHistory(history: CliRunResult[]): void {
+  if (history.length === 0) {
+    console.log("[gateway] no interactive session history yet");
+    return;
+  }
+
+  console.log("[gateway] interactive session history");
+  for (const [index, entry] of history.entries()) {
+    const answerPreview = entry.finalAnswer
+      ? entry.finalAnswer.replace(/\s+/g, " ").slice(0, 80)
+      : "no final answer";
+    const suffix = answerPreview.length === 80 ? "..." : "";
+    console.log(
+      `${index + 1}. task=${entry.taskId} run=${entry.runId ?? "n/a"} steps=${entry.stepsUsed ?? 0} answer=${answerPreview}${suffix}`,
+    );
+  }
+}
+
+function buildCliRunResult(taskId: string, fields: Omit<CliRunResult, "taskId"> = {}): CliRunResult {
+  return {
+    taskId,
+    ...fields,
+  };
+}
+
 export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
-  async function runTaskInput(taskInput: string, sessionId: string): Promise<void> {
+  async function runTaskInput(taskInput: string, sessionId: string): Promise<CliRunResult> {
     const task: RunTask = {
       id: createId("task"),
       sessionId,
@@ -92,53 +183,86 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
     if (result.status === "failed") {
       console.error(`[gateway] task ${task.id} failed: ${result.task.errorMessage ?? "unknown error"}`);
       process.exitCode = 1;
-      return;
+      return buildCliRunResult(task.id, typeof durationMs === "number" ? { durationMs } : {});
     }
 
     console.log(`[gateway] task ${task.id} completed`);
-    if (result.task.runId) {
-      console.log(`[gateway] runId: ${result.task.runId}`);
-    }
-    if (typeof result.task.stepsUsed === "number") {
-      console.log(`[gateway] steps: ${result.task.stepsUsed}`);
-    }
-    if (typeof result.task.toolSummaryCount === "number") {
-      console.log(`[gateway] tool summaries: ${result.task.toolSummaryCount}`);
-    }
-    if (typeof durationMs === "number") {
-      console.log(`[gateway] durationMs: ${durationMs}`);
-    }
-    if (result.task.finalAnswer) {
-      console.log("");
-      console.log("Final answer:");
-      console.log(result.task.finalAnswer);
-    }
+    const cliRunResult = buildCliRunResult(task.id, {
+      ...(result.task.runId ? { runId: result.task.runId } : {}),
+      ...(result.task.finalAnswer ? { finalAnswer: result.task.finalAnswer } : {}),
+      ...(typeof result.task.stepsUsed === "number" ? { stepsUsed: result.task.stepsUsed } : {}),
+      ...(typeof result.task.toolSummaryCount === "number"
+        ? { toolSummaryCount: result.task.toolSummaryCount }
+        : {}),
+      ...(typeof durationMs === "number" ? { durationMs } : {}),
+    });
+    printRunResult(cliRunResult);
+    return cliRunResult;
   }
 
   async function startInteractiveCli(): Promise<void> {
     const sessionId = createId("session");
     const rl = createInterface({ input, output });
+    const history: CliRunResult[] = [];
 
     console.log("Catnip interactive CLI");
-    console.log("Type your task and press Enter. Use /help or /exit.");
+    console.log("Type your task and press Enter. Use /help, /history, /last, /clear or /exit.");
 
     try {
       for (;;) {
-        const line = (await rl.question("catnip> ")).trim();
+        let line: string;
+        try {
+          line = (await rl.question("catnip> ")).trim();
+        } catch (error: unknown) {
+          if (
+            error instanceof Error &&
+            "code" in error &&
+            error.code === "ERR_USE_AFTER_CLOSE"
+          ) {
+            break;
+          }
+
+          throw error;
+        }
         if (line.length === 0) {
           continue;
         }
 
-        if (line === "/exit" || line === "/quit") {
+        const command = parseInteractiveCommand(line);
+        if (command.type === "exit") {
           break;
         }
 
-        if (line === "/help") {
+        if (command.type === "help") {
           printHelp();
           continue;
         }
 
-        await runTaskInput(line, sessionId);
+        if (command.type === "history") {
+          printHistory(history);
+          continue;
+        }
+
+        if (command.type === "last") {
+          const lastResult = history.at(-1);
+          if (!lastResult) {
+            console.log("[gateway] no previous result in this interactive session");
+            continue;
+          }
+          printRunResult(lastResult);
+          continue;
+        }
+
+        if (command.type === "clear") {
+          history.length = 0;
+          console.log("[gateway] cleared interactive session history");
+          continue;
+        }
+
+        if (command.type === "task") {
+          const cliRunResult = await runTaskInput(command.taskInput ?? "", sessionId);
+          history.push(cliRunResult);
+        }
       }
     } finally {
       rl.close();

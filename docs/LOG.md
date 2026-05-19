@@ -990,3 +990,58 @@
 
 - 继续围绕 CLI 做会话体验和输出格式优化
 - 或转入 Runner 的 step 上限、超时、失败恢复
+
+## 2026-05-19 / CLI / 增补交互会话命令并修复 EOF 退出
+
+### 目标
+
+继续沿 `01-gateway` 强化 CLI，使交互模式更适合连续手测，并修复管道喂给交互模式时的退出问题。
+
+### 本次修改
+
+- 为交互模式增加 `/history`
+- 为交互模式增加 `/last`
+- 为交互模式增加 `/clear`
+- 新增 `parseInteractiveCommand`
+- 抽出 `CliRunResult`
+- 抽出 `printRunResult`
+- 抽出 `printHistory`
+- 在交互模式内维护 session history
+- 修复 `readline` 在 stdin EOF 后继续提问导致的 `ERR_USE_AFTER_CLOSE`
+- 更新 README 的交互命令说明
+- 扩展 Gateway 测试覆盖交互命令解析
+
+### 修改文件
+
+- README.md
+- src/layers/01-gateway/wrapper.ts
+- tests/gateway.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，16 个测试全部通过
+- `printf 'readme and git diff\n/history\n/clear\n/history\n/exit\n' | node dist/src/main.js --interactive`：通过
+
+### 回滚判断
+
+- 本轮先后遇到两类问题：
+- `exactOptionalPropertyTypes` 下的可选字段构造错误
+- 交互模式在管道 EOF 后触发 `ERR_USE_AFTER_CLOSE`
+- 两类问题都已在当前分支局部修复
+- 修复后验证通过，因此不执行文件级回滚或提交级回滚
+
+### 风险
+
+- 交互历史仍是进程内内存数据，重启即丢失
+- `/last` 直接重打完整最终回答，长文本下输出仍偏重
+- 交互命令仍是轻量文本协议，不支持参数化子命令
+
+### 下一步
+
+- 继续补 CLI 输出分级或历史持久化
+- 或回到 Runner 的 step/timeout/recovery 主线

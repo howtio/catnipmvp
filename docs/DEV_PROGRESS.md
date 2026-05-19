@@ -45,6 +45,8 @@
 - 完成 DeepSeek 在 Runner 内通过 AI SDK tool calling 直连 EventBus
 - 完成 CLI 可手测增强：单次命令、交互模式、stdin 管道输入、最终回答回显
 - 完成 CLI 结果透传：Worker 将 `runId`、`finalAnswer`、`stepsUsed`、`toolSummaryCount` 回写到任务状态
+- 完成 CLI 交互命令：`/history`、`/last`、`/clear`
+- 完成交互模式 EOF 关闭修复，支持管道输入后正常退出
 - `npm run typecheck` 通过
 - `npm run build` 通过
 - `npm test` 通过
@@ -62,6 +64,7 @@
 - `node dist/src/main.js "readme and git diff"` 在本地 DeepSeek provider 下通过
 - `node dist/src/main.js "readme and git diff"` 在本地 DeepSeek AI SDK tool calling 下通过
 - `node dist/src/main.js "readme and git diff"` 在增强版 CLI 输出下通过
+- `printf 'readme and git diff\\n/history\\n/clear\\n/history\\n/exit\\n' | node dist/src/main.js --interactive` 通过
 
 ### 未开始
 
