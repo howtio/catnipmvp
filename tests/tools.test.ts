@@ -270,3 +270,38 @@ test("executeToolCall open_browser_search opens search url in browser", async ()
     }
   }
 });
+
+test("executeToolCall open_url opens an https url in browser", async () => {
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "catnip-tools-"));
+  const previousOpenOverride = process.env.CATNIP_BROWSER_OPEN_BIN;
+  process.env.CATNIP_BROWSER_OPEN_BIN = "true";
+
+  try {
+    const result = await executeToolCall({
+      workspaceRoot,
+      tool: {
+        name: "open_url",
+        description: "Open url",
+        permission: "medium",
+        category: "browser",
+        argShape: "object",
+        stage: "active",
+      },
+      args: {
+        url: "https://example.com/result",
+      },
+    });
+
+    assert.deepEqual(result, {
+      url: "https://example.com/result",
+      command: "true",
+      argv: ["https://example.com/result"],
+    });
+  } finally {
+    if (previousOpenOverride === undefined) {
+      delete process.env.CATNIP_BROWSER_OPEN_BIN;
+    } else {
+      process.env.CATNIP_BROWSER_OPEN_BIN = previousOpenOverride;
+    }
+  }
+});

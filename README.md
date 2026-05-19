@@ -11,16 +11,18 @@ its my mvp agent for catnipent
 - Pipe input: `echo "readme and git diff" | node dist/src/main.js`
 - HTML preview smoke: `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "create file html and open browser run html"`
 - Web search smoke: `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "web search latest catnip agent runtime and open browser search"`
+- Open url smoke: `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "open url https://example.com/result"`
 
 ## CLI timeline
 
 - Default output shows a compact run timeline: `[queue]`, `[wait]`, `[run]`, `[stage]`, `[context]`, `[plan]`, `[think]`, `[act]`, `[done]`, `[answer]`
-- Startup now prints a pink cat banner and `Welcome to Catnip`
+- Startup now prints one pink cat with a line-by-line entry animation and `Welcome to Catnip`
 - Wait-related lines use pink; plan lines use yellow; tool action/result lines use green
 - Queue lines now show pending position, dispatch moment, and queue wait time before the run starts
 - File-changing tools now show a short change summary, including created/updated file previews and patch `search -> replace`
 - Browser preview uses `open_browser`, limited to `workspaces/demo/*.html`
 - Web search uses `web_search`; browser search uses `open_browser_search`
+- Search result links or explicit web pages can be opened with `open_url`
 - Long-running tasks also print `[timer]` heartbeat lines with elapsed time, idle time since last activity, and the last observed activity
 - Batch mode adds `[orchestrator]` lines so queued task count and completion summary stay visible
 - `--debug` keeps the compact timeline and adds raw event payloads as `[debug] ...`

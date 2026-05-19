@@ -17,6 +17,7 @@
 - `open_browser`
 - `web_search`
 - `open_browser_search`
+- `open_url`
 
 ### medium
 
@@ -30,6 +31,7 @@
 - `open_browser`
 - `web_search`
 - `open_browser_search`
+- `open_url`
 
 受限允许：
 
@@ -37,6 +39,7 @@
 - `open_browser`
 - `web_search`
 - `open_browser_search`
+- `open_url`
 
 允许命令白名单：
 
@@ -62,6 +65,7 @@
 - `web_search` 当前通过 DuckDuckGo HTML 返回结构化结果
 - `open_browser_search` 仅允许把查询词交给默认搜索引擎打开
 - 不允许把 `open_browser_search` 当成任意 URL 打开器
+- `open_url` 仅允许打开 `http/https` 绝对链接
 
 ### high
 

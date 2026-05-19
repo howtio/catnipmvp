@@ -84,7 +84,7 @@ export function bootstrapCatnipAgent() {
     toolRegistry,
     provider: runnerProvider,
     limits: {
-      maxSteps: readPositiveIntegerEnv("CATNIP_RUNNER_MAX_STEPS", 5),
+      maxSteps: readPositiveIntegerEnv("CATNIP_RUNNER_MAX_STEPS", 10),
       continueOnToolError: process.env.CATNIP_RUNNER_CONTINUE_ON_TOOL_ERROR === "1",
       maxToolRetries: readNonNegativeIntegerEnv("CATNIP_RUNNER_MAX_TOOL_RETRIES", 0),
     },

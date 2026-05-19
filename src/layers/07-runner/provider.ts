@@ -72,6 +72,11 @@ function deriveSearchQuery(taskInput: string): string {
   return stripped.length > 0 ? stripped : taskInput;
 }
 
+function deriveOpenUrl(taskInput: string): string | undefined {
+  const match = taskInput.match(/https?:\/\/[^\s"'<>]+/i);
+  return match?.[0];
+}
+
 function normalizePlannedToolArgs(toolName: string, args: Record<string, unknown>): Record<string, unknown> {
   switch (toolName) {
     case "list_files":
@@ -132,6 +137,13 @@ function normalizePlannedToolArgs(toolName: string, args: Record<string, unknown
           typeof args.query === "string" && args.query.trim().length > 0
             ? args.query.trim()
             : "catnip agent",
+      };
+    case "open_url":
+      return {
+        url:
+          typeof args.url === "string" && args.url.trim().length > 0
+            ? args.url.trim()
+            : "https://example.com/",
       };
     case "git_diff":
       return {};
@@ -298,6 +310,19 @@ export function createHeuristicRunnerProvider(): RunnerProvider {
         );
       }
 
+      if (includesAny(taskInput, ["open url", "open link", "打开链接", "点进去", "打开网页"])) {
+        plannedToolCalls.push(
+          buildPlannedToolCall(
+            "open_url",
+            "medium",
+            {
+              url: deriveOpenUrl(context.task.input) ?? "https://example.com/",
+            },
+            "Open the target web result or url in the default browser.",
+          ),
+        );
+      }
+
       if (plannedToolCalls.length === 0) {
         plannedToolCalls.push(
           buildPlannedToolCall("list_files", "low", { path: "." }, "List workspace entries as a safe default."),
@@ -342,6 +367,7 @@ export function createAiSdkRunnerProvider(options: AiSdkRunnerProviderOptions = 
         "Prefer the minimum number of tool calls needed to answer the task.",
         "Write generated preview artifacts under workspaces/demo unless the user explicitly names another workspace path.",
         "open_browser only accepts html files inside workspaces/demo.",
+        "If the user wants to click through a search result or open a webpage, use open_url with an http or https result URL.",
         `Task: ${context.task.input}`,
         `Allowed tools:\n${toolList}`,
         `Workspace root: ${context.workspace.root}`,
@@ -406,6 +432,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
         "Prefer the minimum number of tool calls needed to answer the task.",
         "Write generated preview artifacts under workspaces/demo unless the user explicitly names another workspace path.",
         "open_browser only accepts html files inside workspaces/demo.",
+        "If the user wants to click through a search result or open a webpage, use open_url with an http or https result URL.",
         `Task: ${context.task.input}`,
         `Allowed tools:\n${toolList}`,
         `Workspace root: ${context.workspace.root}`,
@@ -656,6 +683,29 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
               toolSummaries.push(summary);
               if (!summary.ok) {
                 throw new Error(summary.error ?? "open_browser_search failed");
+              }
+              return summary.result;
+            },
+          }),
+          open_url: defineTool({
+            description: "Open an http or https url in the default browser.",
+            inputSchema: z.object({
+              url: z.string().describe("Absolute http or https url."),
+            }),
+            execute: async (input) => {
+              const availableTool = toolMap.get("open_url");
+              if (!availableTool) {
+                throw new Error("Tool registry is missing open_url.");
+              }
+              const summary = await helpers.executeToolCall({
+                toolName: "open_url",
+                permission: availableTool.permission,
+                args: normalizePlannedToolArgs("open_url", input),
+                reason: "Model-selected tool call.",
+              });
+              toolSummaries.push(summary);
+              if (!summary.ok) {
+                throw new Error(summary.error ?? "open_url failed");
               }
               return summary.result;
             },

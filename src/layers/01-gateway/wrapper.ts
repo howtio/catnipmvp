@@ -51,7 +51,7 @@ const GREEN_ANSI = "\u001b[32m";
 const YELLOW_ANSI = "\u001b[33m";
 const RESET_ANSI = "\u001b[0m";
 const INTERACTIVE_PROMPT = "catnip> ";
-const STARTUP_ANIMATION_FRAME_DELAY_MS = 70;
+const STARTUP_ANIMATION_FRAME_DELAY_MS = 45;
 
 export function buildCliStartupArtLines(): string[] {
   return [
@@ -82,16 +82,9 @@ export function buildCliStartupArtLines(): string[] {
   ];
 }
 
-export function buildCliStartupFrames(): string[] {
-  const lines = buildCliStartupArtLines();
-  const cutPoints = [6, 12, 18, lines.length];
-
-  return cutPoints.map((count) => `${PINK_ANSI}${lines.slice(0, count).join("\n")}\nWelcome to Catnip${RESET_ANSI}`);
-}
-
 export function buildCliStartupBanner(): string {
-  const frames = buildCliStartupFrames();
-  return frames.at(-1) ?? `${PINK_ANSI}Welcome to Catnip${RESET_ANSI}`;
+  const lines = buildCliStartupArtLines();
+  return `${PINK_ANSI}${lines.join("\n")}\nWelcome to Catnip${RESET_ANSI}`;
 }
 
 export function getInteractivePrompt(): string {
@@ -115,14 +108,16 @@ function colorizeYellow(line: string): string {
 }
 
 async function printCliStartupAnimation(): Promise<void> {
-  const frames = buildCliStartupFrames();
+  const lines = buildCliStartupArtLines();
 
-  for (const frame of frames) {
-    console.log(frame);
-    if (frame !== frames.at(-1)) {
+  for (const line of lines) {
+    console.log(colorizePink(line));
+    if (line.length > 0) {
       await sleep(STARTUP_ANIMATION_FRAME_DELAY_MS);
     }
   }
+
+  console.log(colorizePink("Welcome to Catnip"));
 }
 
 export function parseCliArgs(argv: string[]): ParsedCliArgs {
@@ -405,6 +400,8 @@ function formatToolRequest(toolName: string, args: unknown): string {
     }
     case "open_browser":
       return `open ${typeof input.path === "string" ? input.path : "(missing path)"}`;
+    case "open_url":
+      return `open-url ${typeof input.url === "string" ? truncateText(input.url, 80) : "(missing url)"}`;
     case "web_search":
       return `web ${typeof input.query === "string" ? truncateText(input.query, 80) : "(missing query)"}`;
     case "open_browser_search":
@@ -482,6 +479,11 @@ function formatToolResult(toolName: string, result: unknown): string {
       const path = typeof output.path === "string" ? output.path : "(unknown path)";
       const command = typeof output.command === "string" ? output.command : "browser";
       return `opened ${path} via ${command}`;
+    }
+    case "open_url": {
+      const url = typeof output.url === "string" ? output.url : "(unknown url)";
+      const command = typeof output.command === "string" ? output.command : "browser";
+      return `opened ${truncateText(url, 80)} via ${command}`;
     }
     case "web_search": {
       const query = typeof output.query === "string" ? output.query : "(unknown query)";

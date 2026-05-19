@@ -309,3 +309,78 @@ test("guardToolCall rejects open_browser_search with empty query", () => {
     assert.match(result.error, /non-empty query/);
   }
 });
+
+test("guardToolCall accepts open_url for https link", () => {
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "catnip-guard-"));
+  const result = guardToolCall(
+    {
+      type: "tool.call.requested",
+      runId: "run_test",
+      toolCallId: "toolcall_test",
+      toolName: "open_url",
+      permission: "medium",
+      workspaceRoot,
+      args: {
+        url: "https://example.com/result",
+      },
+    },
+    {
+      workspaceRoot,
+      toolRegistry: {
+        getTool(name) {
+          return name === "open_url"
+            ? {
+                name: "open_url",
+                description: "Open url.",
+                permission: "medium",
+                category: "browser",
+                argShape: "object",
+                stage: "active",
+              }
+            : undefined;
+        },
+      },
+    },
+  );
+
+  assert.equal(result.ok, true);
+});
+
+test("guardToolCall rejects open_url for file protocol", () => {
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "catnip-guard-"));
+  const result = guardToolCall(
+    {
+      type: "tool.call.requested",
+      runId: "run_test",
+      toolCallId: "toolcall_test",
+      toolName: "open_url",
+      permission: "medium",
+      workspaceRoot,
+      args: {
+        url: "file:///tmp/test.html",
+      },
+    },
+    {
+      workspaceRoot,
+      toolRegistry: {
+        getTool(name) {
+          return name === "open_url"
+            ? {
+                name: "open_url",
+                description: "Open url.",
+                permission: "medium",
+                category: "browser",
+                argShape: "object",
+                stage: "active",
+              }
+            : undefined;
+        },
+      },
+    },
+  );
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.match(result.error, /http or https/);
+  }
+});

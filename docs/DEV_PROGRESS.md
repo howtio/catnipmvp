@@ -79,6 +79,9 @@
 - 完成 runner 搜索链路：`web_search -> open_browser_search`
 - 固化 GitHub 主线命名规则：当前主线名 `catnipent 1.0`
 - 固化 GitHub 上传记录规则：每次上传都要标记改动部分，`docs/LOG.md` 必写版本号
+- 完成浏览器打开链接工具：`open_url`
+- 完成单猫启动进入动画
+- 默认 `CATNIP_RUNNER_MAX_STEPS` 从 `5` 提升到 `10`
 - 强化主施工文档：新增每次开工前与每次收尾强制清单
 - 强化主施工文档：明确每轮代码开发都必须检查日志、push 与回滚判断
 - 强化主施工文档：默认每次开发完成后上传，并持续明确回滚规则
@@ -110,6 +113,7 @@
 - `node dist/src/main.js "readme and git diff"` 通过，并确认输出队列等待、计时心跳和结果页等待时长
 - `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "create file html and open browser run html"` 通过
 - `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "web search latest catnip agent runtime and open browser search"` 通过
+- `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "open url https://example.com/result"` 通过
 
 ### 未开始
 

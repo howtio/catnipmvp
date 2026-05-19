@@ -1,5 +1,84 @@
 # Construction Log
 
+## 2026-05-19 / CLI + Browser / 单猫动画、打开链接与更长思维链路
+
+### 版本
+
+- `catnipent 1.0`
+
+### 目标
+
+修复开机动画碎片化，只保留一只猫逐行进入；完善浏览器和搜索链路，让搜索结果可继续打开目标链接；并把默认思维步数提高。
+
+### 开工检查
+
+- 当前分支：`feat/cli-handtest`
+- 本轮开发前基线提交：`0d3c6d9`
+- 开发前远端备份分支：`backup/pre-single-cat-open-url-20260519-1458`
+- 当前工作区存在既有未跟踪文件，已避开，不做覆盖或回滚
+
+### 本次修改
+
+- 启动动画从重复整屏帧改为单猫逐行进入
+- `Welcome to Catnip` 改为只输出一次
+- 新增 `open_url`
+- `open_url` 仅允许 `http/https` 绝对链接
+- Runner 支持从任务文本提取显式 URL
+- 搜索后可继续走 `open_url`
+- 默认 `CATNIP_RUNNER_MAX_STEPS` 从 `5` 提升到 `10`
+- 更新 README、Tool Policy、总进度与分层日志
+
+### 改动部分
+
+- CLI 启动动画：单猫逐行进入
+- 浏览器链路：`open_url`
+- Runner 预算：默认步数提升到 `10`
+- 文档与施工日志同步
+
+### 修改文件
+
+- .env.example
+- README.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/TOOL_POLICY.md
+- docs/progress/layers/01-gateway.md
+- docs/progress/layers/07-runner.md
+- docs/progress/layers/09-tool-registry.md
+- docs/progress/layers/10-executor.md
+- src/bootstrap.ts
+- src/layers/01-gateway/wrapper.ts
+- src/layers/07-runner/provider.ts
+- src/layers/09-tool-registry/wrapper.ts
+- src/layers/10-executor/guard.ts
+- src/layers/10-executor/tools.ts
+- tests/gateway.test.ts
+- tests/guard.test.ts
+- tests/runner.test.ts
+- tests/tools.test.ts
+
+### 验证结果
+
+- `npm test`：通过，45 个测试全部通过
+- `printf '/exit\\n' | node dist/src/main.js --interactive`：通过
+- `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "open url https://example.com/result"`：通过
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 如需回滚，可回到开发前基线提交 `0d3c6d9`
+- 暂不执行回滚
+
+### 风险
+
+- `open_url` 目前只做协议级约束，未加域名白名单
+- 更长步数预算会让异常任务跑得更久
+
+### 下一步
+
+- 可继续补域名白名单或浏览器历史能力
+- 可继续补关闭启动动画的环境变量
+
 ## 2026-05-19 / CLI / 大号粉猫开机图、彩色时间线与主线命名规则
 
 ### 版本

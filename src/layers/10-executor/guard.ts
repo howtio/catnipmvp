@@ -148,6 +148,27 @@ function ensureSearchQueryArgs(toolName: "web_search" | "open_browser_search", a
   }
 }
 
+function ensureOpenUrlArgs(args: unknown): void {
+  if (!isRecord(args)) {
+    throw new PolicyError("open_url args must be a plain object.");
+  }
+
+  if (typeof args.url !== "string" || args.url.trim().length === 0) {
+    throw new PolicyError("open_url requires a non-empty url string.");
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(args.url);
+  } catch {
+    throw new PolicyError("open_url requires a valid absolute URL.");
+  }
+
+  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+    throw new PolicyError("open_url only allows http or https URLs.");
+  }
+}
+
 function ensureToolSpecificArgs(tool: ToolDefinition, args: unknown, workspaceRoot: string): void {
   if (tool.category === "filesystem") {
     ensureFilesystemArgs(tool.name, args, workspaceRoot);
@@ -166,6 +187,11 @@ function ensureToolSpecificArgs(tool: ToolDefinition, args: unknown, workspaceRo
 
   if (tool.name === "web_search" || tool.name === "open_browser_search") {
     ensureSearchQueryArgs(tool.name, args);
+    return;
+  }
+
+  if (tool.name === "open_url") {
+    ensureOpenUrlArgs(args);
   }
 }
 

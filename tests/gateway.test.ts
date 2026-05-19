@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildCliStartupArtLines,
-  buildCliStartupFrames,
   buildCliStartupBanner,
   buildInteractiveFollowUpInput,
   formatQueueTimerLine,
@@ -108,10 +107,10 @@ test("buildCliStartupArtLines uses the large cat art", () => {
   assert.match(lines.join("\n"), /::::::@@::::::/);
 });
 
-test("buildCliStartupFrames grows across startup animation", () => {
-  const frames = buildCliStartupFrames();
+test("buildCliStartupBanner renders one complete cat and one welcome line", () => {
+  const banner = buildCliStartupBanner();
+  const welcomeCount = banner.match(/Welcome to Catnip/g)?.length ?? 0;
 
-  assert.equal(frames.length, 4);
-  assert.ok(frames[0]!.split("\n").length < frames[3]!.split("\n").length);
-  assert.match(frames[3]!, /Welcome to Catnip/);
+  assert.equal(welcomeCount, 1);
+  assert.ok(banner.split("\n").length >= 20);
 });

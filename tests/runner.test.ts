@@ -118,6 +118,32 @@ test("heuristic runner provider can plan web search and browser search", async (
   assert.equal(plan.plannedToolCalls[1]?.args.query, "latest catnip agent and");
 });
 
+test("heuristic runner provider can plan opening a url", async () => {
+  const provider = createHeuristicRunnerProvider();
+  const plan = await provider.plan({
+    runId: "run_test",
+    task: {
+      id: "task_test",
+      sessionId: "session_test",
+      input: "open url https://example.com and click into it",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    },
+    docs: { coreDocuments: [] },
+    workspace: { root: "/workspace", topLevelEntries: [], layerDirectories: [] },
+    sessionHistory: [],
+    systemPrompt: "prompt",
+    skills: [],
+    skillNames: [],
+    skillInstructions: "",
+  }, [
+    { name: "open_url", description: "Open url", permission: "medium" },
+  ]);
+
+  assert.equal(plan.plannedToolCalls[0]?.toolName, "open_url");
+  assert.equal(plan.plannedToolCalls[0]?.args.url, "https://example.com");
+});
+
 test("summarizeToolOutcome and buildFinalAnswer produce readable output", () => {
   const summary = summarizeToolOutcome(
     {

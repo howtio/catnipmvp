@@ -186,6 +186,37 @@ async function executeOpenBrowser(workspaceRoot: string, args: unknown): Promise
   };
 }
 
+async function executeOpenUrl(workspaceRoot: string, args: unknown): Promise<unknown> {
+  const input = asObject(args);
+  if (typeof input.url !== "string" || input.url.trim().length === 0) {
+    throw new ToolError("open_url requires a non-empty url.");
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(input.url);
+  } catch {
+    throw new ToolError("open_url requires a valid absolute URL.");
+  }
+
+  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+    throw new ToolError("open_url only allows http or https URLs.");
+  }
+
+  const targetUrl = parsedUrl.toString();
+  const openCommand = resolveBrowserOpenCommand(targetUrl);
+  await execFileAsync(openCommand.command, openCommand.argv, {
+    cwd: workspaceRoot,
+    maxBuffer: 1024 * 1024,
+  });
+
+  return {
+    url: targetUrl,
+    command: openCommand.command,
+    argv: openCommand.argv,
+  };
+}
+
 function decodeHtmlEntities(value: string): string {
   return value
     .replaceAll("&amp;", "&")
@@ -311,6 +342,8 @@ export async function executeToolCall({ workspaceRoot, tool, args }: ExecuteTool
       return executeGitDiff(workspaceRoot);
     case "open_browser":
       return executeOpenBrowser(workspaceRoot, args);
+    case "open_url":
+      return executeOpenUrl(workspaceRoot, args);
     case "web_search":
       return executeWebSearch(args);
     case "open_browser_search":

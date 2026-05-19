@@ -74,6 +74,14 @@ const DEFAULT_TOOLS: ToolDefinition[] = [
     argShape: "object",
     stage: "active",
   },
+  {
+    name: "open_url",
+    description: "Open an http or https url in the default browser.",
+    permission: "medium",
+    category: "browser",
+    argShape: "object",
+    stage: "active",
+  },
 ];
 
 export function createToolRegistryLayer(): ToolRegistryLayerApi {
