@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildInteractiveFollowUpInput,
+  formatRunTimerLine,
   parseCliArgs,
   parseInteractiveCommand,
 } from "../src/layers/01-gateway/wrapper.js";
@@ -67,4 +68,10 @@ test("buildInteractiveFollowUpInput includes prior task and refinements", () => 
   assert.match(prompt, /Previous result summary: First version of the story\./);
   assert.match(prompt, /1\. use Wang Xiaobo tone/);
   assert.match(prompt, /2\. shorten the ending/);
+});
+
+test("formatRunTimerLine summarizes elapsed and idle time", () => {
+  const line = formatRunTimerLine("1/1 task_test", 12_400, 4_400, "think writing draft");
+
+  assert.equal(line, "[timer] 1/1 task_test elapsed=12s idle=4s last=think writing draft");
 });

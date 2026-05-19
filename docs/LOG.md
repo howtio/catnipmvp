@@ -1,5 +1,54 @@
 # Construction Log
 
+## 2026-05-19 / CLI / 长任务计时心跳
+
+### 目标
+
+给长任务增加可见的计时心跳，避免用户只能看到静默等待，不知道已经跑了多久、是否还有活动。
+
+### 本次修改
+
+- 为活跃 run 增加本地 CLI 计时器
+- 周期性输出 `[timer]`
+- 输出 `elapsed`
+- 输出 `idle`
+- 输出 `last`
+- run 结束时自动清理计时器
+- 更新 README 时间线说明
+- 更新 Gateway 测试
+
+### 修改文件
+
+- README.md
+- src/layers/01-gateway/wrapper.ts
+- tests/gateway.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm test`：通过，24 个测试全部通过
+- `CATNIP_RUN_TIMEOUT_MS=12000 CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js "帮我用王小波的风格写一下被掩埋的巨人"`：通过
+- 冒烟确认输出 `[timer] task_x elapsed=... idle=... last=...`
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 备份分支已存在：`backup/pre-cli-timer-heartbeat-20260519-130953`
+- 暂不执行回滚
+
+### 风险
+
+- 当前计时器只反映 CLI 侧观测到的活跃 run，不是 provider 内部 token 级进度
+- 长任务多时，终端输出会更密
+
+### 下一步
+
+- 可补用户可配置计时间隔
+- 或补单行刷新式 TUI 状态
+
 ## 2026-05-19 / CLI / 运行中补充输入转 follow-up
 
 ### 目标

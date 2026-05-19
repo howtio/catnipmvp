@@ -52,6 +52,7 @@
 - 完成 prompt / plan / reasoning summary 事件落盘与实时打印
 - 完成 CLI 层状态线实时打印
 - 完成 CLI 紧凑时间线输出：`[queue] / [run] / [stage] / [context] / [plan] / [think] / [act] / [done] / [answer]`
+- 完成 CLI 运行中计时心跳输出：`[timer]`
 - 完成 CLI 多任务编排入口：`--task`、`-t`、`--tasks-file`
 - 完成 CLI 批量任务编排汇总：`[orchestrator]`
 - 完成交互模式运行中补充输入捕获
@@ -91,6 +92,7 @@
 - `CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js --debug "create file workspaces/demo/hello2.html and write a complete minimal html document whose body says 你好世界2"` 通过
 - `node dist/src/main.js --task "readme and git diff" --task "shell status"` 通过
 - `CATNIP_WORKER_COUNT=2 CATNIP_CLI_DEBUG=1 node dist/src/main.js --task "readme and git diff" --task "shell status"` 通过
+- `CATNIP_RUN_TIMEOUT_MS=12000 CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js "帮我用王小波的风格写一下被掩埋的巨人"` 通过，并确认输出 `[timer]`
 
 ### 未开始
 

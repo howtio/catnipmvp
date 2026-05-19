@@ -39,6 +39,7 @@ interface ActiveInteractiveTask {
 }
 
 const FOLLOW_UP_ANSWER_PREVIEW_LIMIT = 1200;
+const RUN_TIMER_INTERVAL_MS = 5000;
 
 export function parseCliArgs(argv: string[]): ParsedCliArgs {
   const positionals: string[] = [];
@@ -243,6 +244,19 @@ function truncateText(value: string, maxLength = 120): string {
   return `${normalized.slice(0, Math.max(0, maxLength - 3))}...`;
 }
 
+function formatElapsedSeconds(durationMs: number): string {
+  return `${Math.max(0, Math.round(durationMs / 1000))}s`;
+}
+
+export function formatRunTimerLine(
+  taskLabel: string,
+  elapsedMs: number,
+  idleMs: number,
+  lastActivity: string,
+): string {
+  return `[timer] ${taskLabel} elapsed=${formatElapsedSeconds(elapsedMs)} idle=${formatElapsedSeconds(idleMs)} last=${truncateText(lastActivity, 80)}`;
+}
+
 function previewText(value: unknown, maxLength = 120): string | undefined {
   if (typeof value !== "string") {
     return undefined;
@@ -376,9 +390,35 @@ function setupCliEventPrinter(
   const trackedTasks = new Map<string, TrackedCliTask>();
   const runToTask = new Map<string, string>();
   const toolCalls = new Map<string, { runId: string; toolName: string; args: unknown }>();
+  const runTimers = new Map<string, {
+    startedAtMs: number;
+    lastActivityAtMs: number;
+    lastActivity: string;
+    interval: NodeJS.Timeout;
+  }>();
 
   function trackTask(task: TrackedCliTask): void {
     trackedTasks.set(task.taskId, task);
+  }
+
+  function updateRunActivity(runId: string, activity: string): void {
+    const timer = runTimers.get(runId);
+    if (!timer) {
+      return;
+    }
+
+    timer.lastActivityAtMs = Date.now();
+    timer.lastActivity = activity;
+  }
+
+  function stopRunTimer(runId: string): void {
+    const timer = runTimers.get(runId);
+    if (!timer) {
+      return;
+    }
+
+    clearInterval(timer.interval);
+    runTimers.delete(runId);
   }
 
   function printDebug(event: EventBusEvent): void {
@@ -401,6 +441,29 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
+      const startedAtMs = Date.now();
+      const interval = setInterval(() => {
+        const timer = runTimers.get(runId);
+        if (!timer) {
+          return;
+        }
+
+        console.log(
+          formatRunTimerLine(
+            formatTaskLabel(task),
+            Date.now() - timer.startedAtMs,
+            Date.now() - timer.lastActivityAtMs,
+            timer.lastActivity,
+          ),
+        );
+      }, RUN_TIMER_INTERVAL_MS);
+      interval.unref?.();
+      runTimers.set(runId, {
+        startedAtMs,
+        lastActivityAtMs: startedAtMs,
+        lastActivity: "run.started",
+        interval,
+      });
       runToTask.set(runId, taskId);
       console.log(`[run] started ${formatTaskLabel(task)} run=${runId}`);
       printDebug(event);
@@ -419,6 +482,7 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
+      updateRunActivity(runId, `stage ${stage}`);
       console.log(`[stage] ${formatTaskLabel(task)} ${formatLayerStage(stage)} ${stage}`);
       printDebug(event);
     }),
@@ -444,6 +508,7 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
+      updateRunActivity(runId, "prompt.composed");
       const skills = readEventField(event, "selectedSkills");
       const docs = readEventField(event, "loadedDocuments");
       const skillCount = Array.isArray(skills) ? skills.length : 0;
@@ -464,9 +529,9 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
-      console.log(
-        `[plan] ${formatTaskLabel(task)} ${summarizePlan(readEventField(event, "plannedToolCalls"))}`,
-      );
+      const planSummary = summarizePlan(readEventField(event, "plannedToolCalls"));
+      updateRunActivity(runId, `plan ${planSummary}`);
+      console.log(`[plan] ${formatTaskLabel(task)} ${planSummary}`);
       printDebug(event);
     }),
     deps.eventbus.subscribe("agent.reasoning.summary", (event) => {
@@ -483,6 +548,7 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
+      updateRunActivity(runId, `think ${summary}`);
       console.log(`[think] ${formatTaskLabel(task)} ${truncateText(summary)}`);
       printDebug(event);
     }),
@@ -500,6 +566,7 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
+      updateRunActivity(runId, `step ${formatDebugPayload(stepNumber)}`);
       console.log(`[step] ${formatTaskLabel(task)} finished step=${formatDebugPayload(stepNumber)}`);
       printDebug(event);
     }),
@@ -520,7 +587,9 @@ function setupCliEventPrinter(
         return;
       }
       toolCalls.set(toolCallId, { runId, toolName, args });
-      console.log(`[act] ${formatTaskLabel(task)} ${formatToolRequest(toolName, args)}`);
+      const activity = formatToolRequest(toolName, args);
+      updateRunActivity(runId, `act ${activity}`);
+      console.log(`[act] ${formatTaskLabel(task)} ${activity}`);
       printDebug(event);
     }),
     deps.eventbus.subscribe("tool.call.result", (event) => {
@@ -541,7 +610,9 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
-      console.log(`[done] ${formatTaskLabel(task)} ${formatToolResult(toolCall.toolName, result)}`);
+      const activity = formatToolResult(toolCall.toolName, result);
+      updateRunActivity(toolCall.runId, `done ${activity}`);
+      console.log(`[done] ${formatTaskLabel(task)} ${activity}`);
       toolCalls.delete(toolCallId);
       printDebug(event);
     }),
@@ -563,6 +634,7 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
+      updateRunActivity(toolCall.runId, `fail ${toolCall.toolName}`);
       console.log(
         `[fail] ${formatTaskLabel(task)} ${toolCall.toolName} ${truncateText(typeof error === "string" ? error : "unknown error", 100)}`,
       );
@@ -583,6 +655,7 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
+      updateRunActivity(runId, "answer.produced");
       console.log(`[answer] ${formatTaskLabel(task)} ${truncateText(answer)}`);
       printDebug(event);
     }),
@@ -600,6 +673,7 @@ function setupCliEventPrinter(
       if (!task) {
         return;
       }
+      stopRunTimer(runId);
       console.log(`[run] finished ${formatTaskLabel(task)} success=${formatDebugPayload(success)}`);
       runToTask.delete(runId);
       printDebug(event);
@@ -609,6 +683,10 @@ function setupCliEventPrinter(
   return {
     trackTask,
     teardown() {
+      for (const timer of runTimers.values()) {
+        clearInterval(timer.interval);
+      }
+      runTimers.clear();
       for (const unsubscribe of unsubscribers) {
         unsubscribe();
       }

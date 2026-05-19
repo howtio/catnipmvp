@@ -13,6 +13,7 @@ its my mvp agent for catnipent
 ## CLI timeline
 
 - Default output shows a compact run timeline: `[queue]`, `[run]`, `[stage]`, `[context]`, `[plan]`, `[think]`, `[act]`, `[done]`, `[answer]`
+- Long-running tasks also print `[timer]` heartbeat lines with elapsed time, idle time since last activity, and the last observed activity
 - Batch mode adds `[orchestrator]` lines so queued task count and completion summary stay visible
 - `--debug` keeps the compact timeline and adds raw event payloads as `[debug] ...`
 
