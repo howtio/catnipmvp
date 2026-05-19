@@ -1,9 +1,10 @@
 import { createId } from "../../shared/utils/createId.js";
 import type { RunTask } from "../../shared/types/runTask.js";
 import type { GatewayLayerApi, GatewayLayerDeps } from "./types.js";
-import { createInterface } from "node:readline/promises";
+import { createInterface } from "node:readline";
 import { stdin as input, stdout as output } from "node:process";
 import { readFile } from "node:fs/promises";
+import { once } from "node:events";
 import type { EventBusEvent } from "../08-eventbus/index.js";
 
 interface ParsedCliArgs {
@@ -29,6 +30,15 @@ interface InteractiveCommand {
   type: "help" | "exit" | "history" | "last" | "clear" | "task";
   taskInput?: string;
 }
+
+interface ActiveInteractiveTask {
+  baseInput: string;
+  ordinal: number;
+  supplements: string[];
+  completion: Promise<void>;
+}
+
+const FOLLOW_UP_ANSWER_PREVIEW_LIMIT = 1200;
 
 export function parseCliArgs(argv: string[]): ParsedCliArgs {
   const positionals: string[] = [];
@@ -651,6 +661,33 @@ function buildCliRunResult(taskId: string, fields: Omit<CliRunResult, "taskId"> 
   };
 }
 
+export function buildInteractiveFollowUpInput(
+  baseInput: string,
+  supplements: string[],
+  previousResult: CliRunResult,
+): string {
+  const lines = [
+    "Follow up the previous interactive task using the user's mid-run refinements.",
+    `Previous user task: ${baseInput}`,
+  ];
+
+  if (typeof previousResult.finalAnswer === "string" && previousResult.finalAnswer.length > 0) {
+    lines.push(
+      `Previous result summary: ${truncateText(previousResult.finalAnswer, FOLLOW_UP_ANSWER_PREVIEW_LIMIT)}`,
+    );
+  } else if (previousResult.ok === false) {
+    lines.push(`Previous task failed or timed out. taskId=${previousResult.taskId}`);
+  }
+
+  lines.push("New user refinements received while the previous run was executing:");
+  for (const [index, supplement] of supplements.entries()) {
+    lines.push(`${index + 1}. ${supplement}`);
+  }
+  lines.push("Revise or continue the work accordingly. Reuse files already written when appropriate.");
+
+  return lines.join("\n");
+}
+
 export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
   function createTask(taskInput: string, sessionId: string): RunTask {
     return {
@@ -765,73 +802,151 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
     const history: CliRunResult[] = [];
     const debugEnabled = process.env.CATNIP_CLI_DEBUG === "1" || process.argv.includes("--debug");
     const printer = setupCliEventPrinter(deps, sessionId, debugEnabled);
+    let activeTask: ActiveInteractiveTask | undefined;
+    let exitRequested = false;
 
     console.log("Catnip interactive CLI");
     console.log("Type your task and press Enter. Use /help, /history, /last, /clear or /exit.");
+    console.log("While a task is running, extra input is captured as follow-up refinements for the next turn.");
+    rl.setPrompt("catnip> ");
+    rl.prompt();
 
     try {
-      for (;;) {
-        let line: string;
-        try {
-          line = (await rl.question("catnip> ")).trim();
-        } catch (error: unknown) {
-          if (
-            error instanceof Error &&
-            "code" in error &&
-            error.code === "ERR_USE_AFTER_CLOSE"
-          ) {
-            break;
-          }
-
-          throw error;
-        }
+      rl.on("line", (rawLine) => {
+        const line = rawLine.trim();
         if (line.length === 0) {
-          continue;
+          rl.prompt();
+          return;
         }
 
         const command = parseInteractiveCommand(line);
         if (command.type === "exit") {
-          break;
+          exitRequested = true;
+          if (activeTask) {
+            console.log("[gateway] exit requested; waiting for the active task to finish");
+            return;
+          }
+          rl.close();
+          return;
         }
 
         if (command.type === "help") {
           printHelp();
-          continue;
+          rl.prompt();
+          return;
         }
 
         if (command.type === "history") {
           printHistory(history);
-          continue;
+          rl.prompt();
+          return;
         }
 
         if (command.type === "last") {
           const lastResult = history.at(-1);
           if (!lastResult) {
             console.log("[gateway] no previous result in this interactive session");
-            continue;
+            rl.prompt();
+            return;
           }
           printRunResult(lastResult);
-          continue;
+          rl.prompt();
+          return;
         }
 
         if (command.type === "clear") {
           history.length = 0;
           console.log("[gateway] cleared interactive session history");
-          continue;
+          rl.prompt();
+          return;
         }
 
-        if (command.type === "task") {
-          const cliRunResult = await runTaskInput(command.taskInput ?? "", sessionId, printer, {
-            taskId: "",
-            taskInput: command.taskInput ?? "",
-            ordinal: history.length + 1,
-          });
-          history.push(cliRunResult);
+        if (command.type !== "task") {
+          rl.prompt();
+          return;
         }
-      }
+
+        const taskInput = command.taskInput ?? "";
+        if (activeTask) {
+          activeTask.supplements.push(taskInput);
+          console.log(
+            `[interactive] captured refinement for task ${activeTask.ordinal}: ${truncateText(taskInput, 90)}`,
+          );
+          rl.prompt();
+          return;
+        }
+
+        startInteractiveTask(taskInput, history.length + 1);
+        rl.prompt();
+      });
+
+      rl.on("close", () => {
+        exitRequested = true;
+      });
+
+      await once(rl, "close");
     } finally {
       printer.teardown();
       rl.close();
+    }
+
+    function startInteractiveTask(taskInput: string, ordinal: number): void {
+      const completion = (async () => {
+        const cliRunResult = await runTaskInput(taskInput, sessionId, printer, {
+          taskId: "",
+          taskInput,
+          ordinal,
+        });
+        history.push(cliRunResult);
+
+        const finishedTask = activeTask;
+        activeTask = undefined;
+
+        if (finishedTask && finishedTask.supplements.length > 0) {
+          if (exitRequested) {
+            console.log(
+              `[interactive] dropping ${finishedTask.supplements.length} pending refinement(s) because exit was requested`,
+            );
+            rl.close();
+            return;
+          }
+          const followUpInput = buildInteractiveFollowUpInput(
+            finishedTask.baseInput,
+            finishedTask.supplements,
+            cliRunResult,
+          );
+          console.log(
+            `[interactive] scheduling follow-up for task ${finishedTask.ordinal} with ${finishedTask.supplements.length} refinement(s)`,
+          );
+          startInteractiveTask(followUpInput, history.length + 1);
+          rl.prompt();
+          return;
+        }
+
+        if (exitRequested) {
+          rl.close();
+          return;
+        }
+
+        rl.prompt();
+      })().catch((error: unknown) => {
+        activeTask = undefined;
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`[gateway] interactive task crashed: ${message}`);
+        process.exitCode = 1;
+        if (exitRequested) {
+          rl.close();
+          return;
+        }
+        rl.prompt();
+      });
+
+      activeTask = {
+        baseInput: taskInput,
+        ordinal,
+        supplements: [],
+        completion,
+      };
     }
   }
 

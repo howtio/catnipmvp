@@ -24,6 +24,11 @@ its my mvp agent for catnipent
 - `/clear`
 - `/exit`
 
+## Interactive follow-up
+
+- In `--interactive` mode, if you type extra text while a task is still running, Catnip captures it as a follow-up refinement for the next turn
+- The current in-flight model call is not mutated mid-run; the refinement is applied as the next queued interactive turn after the current task finishes
+
 ## Debug tracing
 
 - CLI realtime debug: `CATNIP_CLI_DEBUG=1 node dist/src/main.js --interactive`

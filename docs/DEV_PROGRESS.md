@@ -54,6 +54,8 @@
 - 完成 CLI 紧凑时间线输出：`[queue] / [run] / [stage] / [context] / [plan] / [think] / [act] / [done] / [answer]`
 - 完成 CLI 多任务编排入口：`--task`、`-t`、`--tasks-file`
 - 完成 CLI 批量任务编排汇总：`[orchestrator]`
+- 完成交互模式运行中补充输入捕获
+- 完成交互模式 follow-up refinement 自动续跑
 - 完成 Worker 线程池式消费配置：`CATNIP_WORKER_COUNT`
 - 完成 Worker 心跳频率配置：`CATNIP_WORKER_HEARTBEAT_MS`
 - 完成 Worker 聚合心跳字段：`activeWorkers`、`idleWorkers`、`queueDepth`、`completedTasks`、`failedTasks`

@@ -1,5 +1,55 @@
 # Construction Log
 
+## 2026-05-19 / CLI / 运行中补充输入转 follow-up
+
+### 目标
+
+修复交互模式下“任务运行时无法继续输入微调指令”的问题，让运行中的补充文本能够被接收并在当前任务结束后续跑。
+
+### 本次修改
+
+- 将交互模式从阻塞式 `readline/promises.question()` 改为事件驱动 `readline`
+- 增加运行中 refinement 捕获
+- 增加 `buildInteractiveFollowUpInput`
+- 当前任务结束后自动把 refinement 组装成 follow-up 输入
+- `/exit` 在有活跃任务时改为等待当前任务结束
+- 如果已请求退出，则丢弃尚未执行的 follow-up refinement
+- 更新 README 交互说明
+- 更新 Gateway 测试
+
+### 修改文件
+
+- README.md
+- src/layers/01-gateway/wrapper.ts
+- tests/gateway.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm test`：通过，23 个测试全部通过
+- `bash -lc '(printf "帮我写被掩埋的巨人的故事\\n"; sleep 2; printf "王小波风\\n"; sleep 1; printf "/exit\\n") | CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js --interactive'`
+- 冒烟确认运行中输入 `王小波风` 会被立即打印为 `captured refinement`
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 备份分支已存在：`backup/pre-interactive-followup-20260519-125657`
+- 暂不执行回滚
+
+### 风险
+
+- 当前 follow-up 不是中断执行，只是把中途输入变成下一轮任务
+- DeepSeek 长任务下，当前轮仍可能超时；follow-up 只是在当前轮结束后接着跑
+
+### 下一步
+
+- 继续做真正的 session history
+- 或补 runner 级 interrupt / cancel
+- 或补 `/followup` 与 `/interrupt` 明确命令语义
+
 ## 2026-05-19 / Worker / 线程池式消费与增强心跳
 
 ### 目标

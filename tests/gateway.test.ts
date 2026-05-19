@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseCliArgs, parseInteractiveCommand } from "../src/layers/01-gateway/wrapper.js";
+import {
+  buildInteractiveFollowUpInput,
+  parseCliArgs,
+  parseInteractiveCommand,
+} from "../src/layers/01-gateway/wrapper.js";
 
 test("parseCliArgs reads single-run input text", () => {
   const parsed = parseCliArgs(["readme", "and", "git", "diff"]);
@@ -46,4 +50,21 @@ test("parseInteractiveCommand preserves task input", () => {
     type: "task",
     taskInput: "readme and git diff",
   });
+});
+
+test("buildInteractiveFollowUpInput includes prior task and refinements", () => {
+  const prompt = buildInteractiveFollowUpInput(
+    "write a story about buried giant",
+    ["use Wang Xiaobo tone", "shorten the ending"],
+    {
+      taskId: "task_test",
+      ok: true,
+      finalAnswer: "First version of the story.",
+    },
+  );
+
+  assert.match(prompt, /Previous user task: write a story about buried giant/);
+  assert.match(prompt, /Previous result summary: First version of the story\./);
+  assert.match(prompt, /1\. use Wang Xiaobo tone/);
+  assert.match(prompt, /2\. shorten the ending/);
 });
