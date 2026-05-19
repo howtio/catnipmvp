@@ -2,6 +2,10 @@
 
 ## 2026-05-19 / CLI / 大号粉猫开机图、彩色时间线与主线命名规则
 
+### 版本
+
+- `catnipent 1.0`
+
 ### 目标
 
 按用户要求调整 CLI 视觉：去掉 `codex` 痕迹、保留 `catnip`，开机显示更大的粉色小猫和 `Welcome`，并给等待、规划、工具调用加颜色；同时把 GitHub 主线命名规则固化为 `catnipent 1.0` 体系并上传。
@@ -26,6 +30,12 @@
 - 固化当前主线版本名为 `catnipent 1.0`
 - 说明后续大改默认沿用 `catnipent 1.x`
 - 新增 Gateway banner / prompt 测试
+
+### 改动部分
+
+- CLI 交互提示符与启动猫图
+- CLI 时间线颜色
+- GitHub 主线命名规则文档
 
 ### 修改文件
 
@@ -56,6 +66,71 @@
 
 - 可继续补颜色开关
 - 可继续补版本号递增自动化
+
+## 2026-05-19 / CLI / 大猫进入动画与上传记录规则
+
+### 版本
+
+- `catnipent 1.0`
+
+### 目标
+
+基于用户提供的大猫 ASCII 图，把交互 CLI 启动改成进入动画；同时强化文档规则，要求以后每次上传 GitHub 都必须标记改动部分，并在 `docs/LOG.md` 里写明本轮版本号。
+
+### 开工检查
+
+- 当前分支：`feat/cli-handtest`
+- 本轮开发前基线提交：`cfd48fa`
+- 开发前远端备份分支：`backup/pre-cat-banner-color-20260519-1442`
+- 当前工作区存在既有未跟踪文件，已避开，不做覆盖或回滚
+
+### 本次修改
+
+- 启动猫图替换为用户指定的大号猫图
+- 启动过程改为逐帧进入动画
+- 保留粉色与 `Welcome to Catnip`
+- 主文档新增“每次上传都要标记改动部分”规则
+- 主文档新增“`docs/LOG.md` 必写版本号”规则
+- 进度系统文档同步规则
+- Gateway 层日志同步记录进入动画
+- 新增启动动画相关测试
+
+### 改动部分
+
+- CLI 启动视觉：大猫 ASCII、进入动画、欢迎语
+- 文档规则：GitHub 上传改动标记、日志版本记录
+- 测试：启动大猫图与动画帧覆盖
+
+### 修改文件
+
+- CODEX_MASTER_REQUIREMENTS.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/README.md
+- docs/progress/layers/01-gateway.md
+- src/layers/01-gateway/wrapper.ts
+- tests/gateway.test.ts
+
+### 验证结果
+
+- `npm test`：通过，39 个测试全部通过
+- `printf '/exit\\n' | node dist/src/main.js --interactive`：通过
+- 冒烟确认启动时打印大号粉色猫图、`Welcome to Catnip` 和 `catnip> `
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 如需回滚，可回到开发前基线提交 `cfd48fa`
+- 暂不执行回滚
+
+### 风险
+
+- 进入动画会让交互 CLI 启动稍慢一点
+- ANSI 控制和彩色输出仍依赖终端支持
+
+### 下一步
+
+- 可继续补关闭动画的环境变量
 
 ## 2026-05-19 / Tools / 增加网页搜索与浏览器搜索
 

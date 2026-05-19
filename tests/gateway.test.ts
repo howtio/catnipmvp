@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildCliStartupArtLines,
+  buildCliStartupFrames,
   buildCliStartupBanner,
   buildInteractiveFollowUpInput,
   formatQueueTimerLine,
@@ -94,6 +96,22 @@ test("buildCliStartupBanner prints a pink cat banner", () => {
 
   assert.match(banner, /\u001b\[38;5;213m/);
   assert.match(banner, /Welcome to Catnip/);
-  assert.match(banner, /\/\\___\/\\\\/);
-  assert.ok(banner.split("\n").length >= 10);
+  assert.match(banner, /\/\\_________________________\/\\\\/);
+  assert.ok(banner.split("\n").length >= 20);
+});
+
+test("buildCliStartupArtLines uses the large cat art", () => {
+  const lines = buildCliStartupArtLines();
+
+  assert.ok(lines.length >= 20);
+  assert.equal(lines[0], "/\\_________________________/\\\\");
+  assert.match(lines.join("\n"), /::::::@@::::::/);
+});
+
+test("buildCliStartupFrames grows across startup animation", () => {
+  const frames = buildCliStartupFrames();
+
+  assert.equal(frames.length, 4);
+  assert.ok(frames[0]!.split("\n").length < frames[3]!.split("\n").length);
+  assert.match(frames[3]!, /Welcome to Catnip/);
 });

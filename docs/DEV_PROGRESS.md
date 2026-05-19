@@ -78,6 +78,7 @@
 - 完成浏览器搜索工具：`open_browser_search`
 - 完成 runner 搜索链路：`web_search -> open_browser_search`
 - 固化 GitHub 主线命名规则：当前主线名 `catnipent 1.0`
+- 固化 GitHub 上传记录规则：每次上传都要标记改动部分，`docs/LOG.md` 必写版本号
 - 强化主施工文档：新增每次开工前与每次收尾强制清单
 - 强化主施工文档：明确每轮代码开发都必须检查日志、push 与回滚判断
 - 强化主施工文档：默认每次开发完成后上传，并持续明确回滚规则

@@ -7,6 +7,7 @@ import { readFile } from "node:fs/promises";
 import { once } from "node:events";
 import type { EventBusEvent } from "../08-eventbus/index.js";
 import type { QueueTaskSnapshot } from "../02-queue/index.js";
+import { sleep } from "../../shared/utils/sleep.js";
 
 interface ParsedCliArgs {
   showHelp: boolean;
@@ -50,24 +51,47 @@ const GREEN_ANSI = "\u001b[32m";
 const YELLOW_ANSI = "\u001b[33m";
 const RESET_ANSI = "\u001b[0m";
 const INTERACTIVE_PROMPT = "catnip> ";
+const STARTUP_ANIMATION_FRAME_DELAY_MS = 70;
+
+export function buildCliStartupArtLines(): string[] {
+  return [
+    "/\\_________________________/\\\\",
+    "              __/  \\\\_______________________/  \\\\__",
+    "            _/:::::::::::::::::::::::::::::::::::::\\\\_",
+    "          _/:::::::::::::::::::::::::::::::::::::::::\\\\_",
+    "         /:::::::::::::::::::::::::::::::::::::::::::::\\\\",
+    "        /:::::::::::::::::::::::::::::::::::::::::::::::\\\\",
+    "       |:::::::::::::::::::::::::::::::::::::::::::::::::|",
+    "       |:::::::::::::::   o                 o   ::::::::|",
+    "       |::::::::::::::::                           ::::::|",
+    "       |::::::::::::::::           ___             ::::::|",
+    "       |::::::::::::::::          \\\\___/            ::::::|",
+    "       |:::::::::::::::::::::::::::::::::::::::::::::::::|",
+    "        \\\\:::::::::::::::::::::::::::::::::::::::::::::::/",
+    "         \\\\:::::::::::::::::::::::::::::::::::::::::::::/",
+    "          \\\\_:::::::::::::::::::::::::::::::::::::::::_/",
+    "            \\\\_______________________________________/",
+    "",
+    "              /\\\\ ",
+    "         ____/  \\\\____",
+    "        /::::::::::::\\\\",
+    "       /::::::@@::::::\\\\",
+    "       \\\\::::::@@::::::/",
+    "        \\\\____::::____/",
+    "             \\\\::/",
+  ];
+}
+
+export function buildCliStartupFrames(): string[] {
+  const lines = buildCliStartupArtLines();
+  const cutPoints = [6, 12, 18, lines.length];
+
+  return cutPoints.map((count) => `${PINK_ANSI}${lines.slice(0, count).join("\n")}\nWelcome to Catnip${RESET_ANSI}`);
+}
 
 export function buildCliStartupBanner(): string {
-  const cat = [
-    "                         /\\___/\\\\",
-    "                        /  o o  \\\\",
-    "                       /    ^    \\\\",
-    "                      /  /     \\\\  \\\\",
-    "                     /__/|     |\\\\__\\\\",
-    "                        |  ___  |",
-    "                        | /   \\\\ |",
-    "                        | |   | |",
-    "                        | |   | |",
-    "                        |_|   |_|",
-    "                       /_/     \\_\\\\",
-    "                      (__)     (__)",
-  ].join("\n");
-
-  return `${PINK_ANSI}${cat}\nWelcome to Catnip${RESET_ANSI}`;
+  const frames = buildCliStartupFrames();
+  return frames.at(-1) ?? `${PINK_ANSI}Welcome to Catnip${RESET_ANSI}`;
 }
 
 export function getInteractivePrompt(): string {
@@ -88,6 +112,17 @@ function colorizeGreen(line: string): string {
 
 function colorizeYellow(line: string): string {
   return colorizeLine(YELLOW_ANSI, line);
+}
+
+async function printCliStartupAnimation(): Promise<void> {
+  const frames = buildCliStartupFrames();
+
+  for (const frame of frames) {
+    console.log(frame);
+    if (frame !== frames.at(-1)) {
+      await sleep(STARTUP_ANIMATION_FRAME_DELAY_MS);
+    }
+  }
 }
 
 export function parseCliArgs(argv: string[]): ParsedCliArgs {
@@ -1081,7 +1116,7 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
     let activeTask: ActiveInteractiveTask | undefined;
     let exitRequested = false;
 
-    console.log(buildCliStartupBanner());
+    await printCliStartupAnimation();
     console.log("Catnip interactive CLI");
     console.log("Type your task and press Enter. Use /help, /history, /last, /clear or /exit.");
     console.log("While a task is running, extra input is captured as follow-up refinements for the next turn.");
