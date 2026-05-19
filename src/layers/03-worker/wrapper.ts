@@ -1,27 +1,39 @@
 import type { WorkerLayerApi, WorkerLayerDeps } from "./types.js";
 import { createId } from "../../shared/utils/createId.js";
 
-const HEARTBEAT_INTERVAL_MS = 1000;
+const DEFAULT_WORKER_COUNT = 1;
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 1000;
 
 export function createWorkerLayer(deps: WorkerLayerDeps): WorkerLayerApi {
   const workerId = createId("worker");
+  const workerCount = Math.max(1, deps.config?.workerCount ?? DEFAULT_WORKER_COUNT);
+  const heartbeatIntervalMs = Math.max(1, deps.config?.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS);
   let started = false;
-  let busy = false;
+  let activeWorkers = 0;
+  let completedTasks = 0;
+  let failedTasks = 0;
 
   function publishHeartbeat(): void {
     deps.heartbeatPublisher?.publish({
       type: "worker.heartbeat",
       workerId,
       at: new Date().toISOString(),
-      busy,
+      busy: activeWorkers > 0,
+      workerCount,
+      activeWorkers,
+      idleWorkers: Math.max(0, workerCount - activeWorkers),
+      queueDepth: deps.queue.size(),
+      completedTasks,
+      failedTasks,
     });
   }
 
-  async function consumeLoop(): Promise<void> {
+  async function consumeLoop(slotNumber: number): Promise<void> {
     for (;;) {
       const task = await deps.queue.waitForTask();
 
-      busy = true;
+      void slotNumber;
+      activeWorkers += 1;
       deps.queue.setStatus(task.id, "running", {
         startedAt: new Date().toISOString(),
       });
@@ -29,6 +41,7 @@ export function createWorkerLayer(deps: WorkerLayerDeps): WorkerLayerApi {
 
       try {
         const report = await deps.harness.runTask(task);
+        completedTasks += 1;
         deps.queue.setStatus(task.id, "done", {
           runId: report.runId,
           finishedAt: new Date().toISOString(),
@@ -37,13 +50,14 @@ export function createWorkerLayer(deps: WorkerLayerDeps): WorkerLayerApi {
           toolSummaryCount: report.toolSummaryCount,
         });
       } catch (error: unknown) {
+        failedTasks += 1;
         const errorMessage = error instanceof Error ? error.message : String(error);
         deps.queue.setStatus(task.id, "failed", {
           finishedAt: new Date().toISOString(),
           errorMessage,
         });
       } finally {
-        busy = false;
+        activeWorkers = Math.max(0, activeWorkers - 1);
         publishHeartbeat();
       }
     }
@@ -57,9 +71,11 @@ export function createWorkerLayer(deps: WorkerLayerDeps): WorkerLayerApi {
 
       started = true;
       publishHeartbeat();
-      setInterval(publishHeartbeat, HEARTBEAT_INTERVAL_MS).unref();
-      void consumeLoop();
-      console.log(`[worker] started ${workerId}`);
+      setInterval(publishHeartbeat, heartbeatIntervalMs).unref();
+      for (let slotNumber = 1; slotNumber <= workerCount; slotNumber += 1) {
+        void consumeLoop(slotNumber);
+      }
+      console.log(`[worker] started ${workerId} slots=${workerCount}`);
     },
   };
 }

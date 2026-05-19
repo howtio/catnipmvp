@@ -108,3 +108,44 @@
 
 - 继续补 Worker 生命周期管理
 - 或在 Queue / Harness 间抽独立任务结果结构
+
+## 2026-05-19 / Worker / 线程池式消费与增强心跳
+
+### 当前目标
+
+把 Worker 从单循环消费提升为可配置并发消费，并让 heartbeat 能反映线程池状态，而不只是最小 `busy` 标志。
+
+### 本次完成
+
+- 为 Worker 增加 `workerCount` 配置
+- 为 Worker 增加 `heartbeatIntervalMs` 配置
+- 启动时按 `workerCount` 拉起多个消费槽
+- 保持 Queue 只负责 FIFO，不把线程池逻辑放进 Queue
+- heartbeat 增加 `activeWorkers`
+- heartbeat 增加 `idleWorkers`
+- heartbeat 增加 `queueDepth`
+- heartbeat 增加 `completedTasks`
+- heartbeat 增加 `failedTasks`
+- `bootstrap` 支持从环境变量注入 Worker 配置
+- trace 日志接入 `worker.heartbeat`
+- 新增 Worker 并发消费测试
+- 新增 Worker 心跳观测测试
+
+### 当前状态
+
+- 已完成：Worker 并发消费骨架
+- 已完成：Worker 聚合心跳观测
+- 进行中：仍是单进程内并发槽位，不是真操作系统线程
+- 未完成：显式 shutdown、任务取消、worker 池动态缩放
+
+### 风险与阻塞
+
+- 当前“线程池”本质上是 Node 进程内多个异步消费槽，不是多进程或 `worker_threads`
+- 长时间运行下仍缺少优雅关闭机制
+- 心跳当前是聚合视角，还没做到每个槽位单独追踪
+
+### 下一步
+
+- 可补 shutdown 与测试清理机制
+- 或补每个消费槽位的独立标识和更细粒度日志
+- 或继续补 queue backlog / starvation 观测

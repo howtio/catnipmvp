@@ -16,6 +16,7 @@ const TRACE_EVENT_TYPES = new Set([
   "run.started",
   "run.finished",
   "run.heartbeat",
+  "worker.heartbeat",
   "prompt.composed",
   "agent.plan.generated",
   "agent.reasoning.summary",
@@ -66,6 +67,7 @@ export function bootstrapCatnipAgent() {
   eventbus.subscribe("prompt.composed", writeTraceEvent);
   eventbus.subscribe("agent.plan.generated", writeTraceEvent);
   eventbus.subscribe("agent.reasoning.summary", writeTraceEvent);
+  eventbus.subscribe("worker.heartbeat", writeTraceEvent);
   eventbus.subscribe("tool.call.requested", writeTraceEvent);
   eventbus.subscribe("tool.call.result", writeTraceEvent);
   eventbus.subscribe("tool.call.failed", writeTraceEvent);
@@ -104,6 +106,10 @@ export function bootstrapCatnipAgent() {
     queue,
     harness,
     heartbeatPublisher: eventbus,
+    config: {
+      workerCount: readPositiveIntegerEnv("CATNIP_WORKER_COUNT", 1),
+      heartbeatIntervalMs: readPositiveIntegerEnv("CATNIP_WORKER_HEARTBEAT_MS", 1000),
+    },
   });
   const gateway = createGatewayLayer({
     queue,

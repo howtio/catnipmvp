@@ -51,6 +51,12 @@
 - 完成本地 trace 日志：`logs/catnip-trace.jsonl`
 - 完成 prompt / plan / reasoning summary 事件落盘与实时打印
 - 完成 CLI 层状态线实时打印
+- 完成 CLI 紧凑时间线输出：`[queue] / [run] / [stage] / [context] / [plan] / [think] / [act] / [done] / [answer]`
+- 完成 CLI 多任务编排入口：`--task`、`-t`、`--tasks-file`
+- 完成 CLI 批量任务编排汇总：`[orchestrator]`
+- 完成 Worker 线程池式消费配置：`CATNIP_WORKER_COUNT`
+- 完成 Worker 心跳频率配置：`CATNIP_WORKER_HEARTBEAT_MS`
+- 完成 Worker 聚合心跳字段：`activeWorkers`、`idleWorkers`、`queueDepth`、`completedTasks`、`failedTasks`
 - 完成 `run.started / run.heartbeat / agent.step.finished / run.finished` 调试追踪
 - 完成 Runner 统一运行限制：`maxSteps`、工具失败重试、失败后可选继续
 - 完成 Harness run 级超时包装与 `TimeoutError` 失败分类
@@ -58,7 +64,9 @@
 - 完成超时与运行限制测试：`tests/harness.test.ts`、`tests/runner.test.ts`
 - 强化主施工文档：新增每次开工前与每次收尾强制清单
 - 强化主施工文档：明确每轮代码开发都必须检查日志、push 与回滚判断
-- 强化主施工文档：默认每次开发完成后上传，回滚前必须先询问用户
+- 强化主施工文档：默认每次开发完成后上传，并持续明确回滚规则
+- 强化主施工文档：每次开发前必须先上传备份
+- 强化主施工文档：如出问题默认回滚到上一版本并告知测试命令
 - `npm run typecheck` 通过
 - `npm run build` 通过
 - `npm test` 通过
@@ -79,6 +87,8 @@
 - `printf 'readme and git diff\\n/history\\n/clear\\n/history\\n/exit\\n' | node dist/src/main.js --interactive` 通过
 - `CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js --debug "readme and git diff"` 通过
 - `CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js --debug "create file workspaces/demo/hello2.html and write a complete minimal html document whose body says 你好世界2"` 通过
+- `node dist/src/main.js --task "readme and git diff" --task "shell status"` 通过
+- `CATNIP_WORKER_COUNT=2 CATNIP_CLI_DEBUG=1 node dist/src/main.js --task "readme and git diff" --task "shell status"` 通过
 
 ### 未开始
 

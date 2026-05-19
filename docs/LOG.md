@@ -1,5 +1,171 @@
 # Construction Log
 
+## 2026-05-19 / Worker / 线程池式消费与增强心跳
+
+### 目标
+
+完善等待队列消费侧，让 CLI 多任务不再只依赖单 worker 串行处理；同时补可观测的 worker 池心跳，便于交互手测。
+
+### 本次修改
+
+- 开发前备份分支已推送：`backup/pre-threadpool-heartbeat-20260519-124722`
+- 备份基线提交：`c3ca89d6bccf4bebb1d4d0765e57088822529eca`
+- 为 Worker 增加 `workerCount`
+- 为 Worker 增加 `heartbeatIntervalMs`
+- 启动时拉起多个并发消费槽
+- `worker.heartbeat` 增加 `workerCount`
+- `worker.heartbeat` 增加 `activeWorkers`
+- `worker.heartbeat` 增加 `idleWorkers`
+- `worker.heartbeat` 增加 `queueDepth`
+- `worker.heartbeat` 增加 `completedTasks`
+- `worker.heartbeat` 增加 `failedTasks`
+- `bootstrap` 增加 `CATNIP_WORKER_COUNT`
+- `bootstrap` 增加 `CATNIP_WORKER_HEARTBEAT_MS`
+- trace 日志订阅 `worker.heartbeat`
+- CLI `--debug` 增加 worker 心跳打印
+- 新增 `tests/worker.test.ts`
+
+### 修改文件
+
+- .env.example
+- src/bootstrap.ts
+- src/layers/01-gateway/wrapper.ts
+- src/layers/03-worker/index.ts
+- src/layers/03-worker/types.ts
+- src/layers/03-worker/wrapper.ts
+- src/shared/types/event.ts
+- tests/worker.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+- docs/progress/layers/03-worker.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm test`：通过，22 个测试全部通过
+- `CATNIP_WORKER_COUNT=2 CATNIP_CLI_DEBUG=1 node dist/src/main.js --task "readme and git diff" --task "shell status"`：通过
+- 调试输出确认可见 `worker.heartbeat active / idle / queue`
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 备份分支已存在，如后续发现问题可回到 `c3ca89d6bccf4bebb1d4d0765e57088822529eca`
+- 暂不执行回滚
+
+### 风险
+
+- 当前线程池是 Node 进程内异步消费槽，不是 `worker_threads`
+- `--debug` 下心跳输出会增加
+- Worker 仍缺少优雅 shutdown
+
+### 下一步
+
+- 继续补 shutdown / cancel
+- 或补 backlog 与 starvation 观测
+- 或补每个 worker slot 的独立标识
+
+## 2026-05-19 / Docs / 改成开发前先备份、出问题回滚上一版本
+
+### 目标
+
+按用户最新协作偏好修正文档默认规则：每次开发前先上传一个可回退备份；如果后续开发出问题，默认回滚到上一版本，并明确告诉用户测试命令。
+
+### 本次修改
+
+- 修改主文档开工前强制清单
+- 修改主文档收尾强制清单
+- 修改 GitHub 协作基本原则
+- 修改 GitHub 上传前检查项
+- 修改 GitHub 回滚顺序
+- 明确每次真实开发前必须先上传备份
+- 明确回滚后必须告知用户实际复测命令
+- 同步更新 `docs/progress/README.md`
+- 同步更新 `docs/DEV_PROGRESS.md`
+
+### 修改文件
+
+- CODEX_MASTER_REQUIREMENTS.md
+- docs/progress/README.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+
+### 验证结果
+
+- 本轮为文档修改
+- 已人工检查主文档、进度索引与总进度日志规则一致
+
+### 回滚判断
+
+- 本轮仅修改文档
+- 不执行回滚
+
+### 风险
+
+- 新规则会增加每轮真实开发前的固定 Git 操作
+- 如果工作区本身长期不干净，开发前备份需要先判断如何与用户已有改动共存
+
+### 下一步
+
+- 后续每次真实开发前先做远端备份并记录提交号
+- 若后续开发失败，默认回滚到上一版本并在回复中写明测试命令
+
+## 2026-05-19 / CLI / 紧凑时间线输出与多任务编排
+
+### 目标
+
+把 CLI 从“主要依赖 `--debug` 看原始事件”推进到“默认就像 coding agent 一样能看见公开思考、工具动作、命令执行和批量任务编排”。
+
+### 本次修改
+
+- 将 Gateway CLI 参数从单一 `inputText` 扩展为 `tasks`
+- 新增 `--task` / `-t`
+- 新增 `--tasks-file`
+- 支持按行读取任务文件并忽略 `#` 注释
+- 新增 `CliEventPrinter`
+- 默认输出紧凑时间线标签：`[queue]`、`[run]`、`[stage]`、`[context]`、`[plan]`、`[think]`、`[act]`、`[done]`、`[fail]`、`[answer]`
+- 新增批量编排标签：`[orchestrator]`
+- 为工具请求和工具结果增加人类可读格式化
+- 兼容 Executor `tool.call.result.result.payload` 结构
+- 交互模式接入同一套事件打印器
+- 更新 `README.md` CLI quick start
+- 更新 Gateway 相关测试
+
+### 修改文件
+
+- README.md
+- src/layers/01-gateway/wrapper.ts
+- tests/gateway.test.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm test`：通过，20 个测试全部通过
+- `node dist/src/main.js "readme and git diff"`：通过
+- `node dist/src/main.js --task "readme and git diff" --task "shell status"`：通过
+- `node dist/src/main.js --debug "readme and git diff"`：通过
+
+### 回滚判断
+
+- 本轮为 CLI 增强与文档同步
+- 测试与冒烟均通过
+- 暂不执行回滚
+
+### 风险
+
+- 默认输出比过去更密，长任务下仍可能需要折叠或分级
+- 批量任务当前是单 worker FIFO 编排，不是并发多 agent
+- provider tool-calling 模式的 `plan` 行目前仍可能先显示空计划，再进入真实工具调用
+
+### 下一步
+
+- 继续做 `summary/full` 输出级别
+- 或补更像 TUI 的任务面板
+- 或在 CLI 上增加更明确的工具输出折叠策略
+
 ## 2026-05-19 / Docs / 调整上传与回滚默认规则
 
 ### 目标

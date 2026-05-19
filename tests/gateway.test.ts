@@ -8,7 +8,7 @@ test("parseCliArgs reads single-run input text", () => {
   assert.equal(parsed.showHelp, false);
   assert.equal(parsed.interactive, false);
   assert.equal(parsed.debug, false);
-  assert.equal(parsed.inputText, "readme and git diff");
+  assert.deepEqual(parsed.tasks, ["readme and git diff"]);
 });
 
 test("parseCliArgs detects interactive and help flags", () => {
@@ -17,7 +17,21 @@ test("parseCliArgs detects interactive and help flags", () => {
   assert.equal(parsed.showHelp, true);
   assert.equal(parsed.interactive, true);
   assert.equal(parsed.debug, true);
-  assert.equal(parsed.inputText, undefined);
+  assert.deepEqual(parsed.tasks, []);
+});
+
+test("parseCliArgs collects repeated task flags and tasks file", () => {
+  const parsed = parseCliArgs([
+    "--task",
+    "read README",
+    "--task",
+    "run git diff",
+    "--tasks-file",
+    "tasks.txt",
+  ]);
+
+  assert.deepEqual(parsed.tasks, ["read README", "run git diff"]);
+  assert.equal(parsed.tasksFilePath, "tasks.txt");
 });
 
 test("parseInteractiveCommand detects slash commands", () => {

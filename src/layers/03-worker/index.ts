@@ -1,2 +1,2 @@
 export { createWorkerLayer } from "./wrapper.js";
-export type { WorkerLayerApi, WorkerLayerDeps } from "./types.js";
+export type { WorkerLayerApi, WorkerLayerConfig, WorkerLayerDeps } from "./types.js";

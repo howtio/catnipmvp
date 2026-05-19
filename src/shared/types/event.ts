@@ -82,6 +82,12 @@ export type CatnipEvent =
       workerId: string;
       at: string;
       busy: boolean;
+      workerCount: number;
+      activeWorkers: number;
+      idleWorkers: number;
+      queueDepth: number;
+      completedTasks: number;
+      failedTasks: number;
     }
   | {
       type: "run.heartbeat";
