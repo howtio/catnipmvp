@@ -64,14 +64,23 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
 
         const enrichedContext = await deps.skills.injectSkills(context);
         deps.eventbus.publish({
+          type: "run.heartbeat",
+          runId,
+          at: new Date().toISOString(),
+          stage: "memory.hydrate.started",
+        });
+        const memoryContext = await deps.memory.hydrateContext(enrichedContext);
+        deps.eventbus.publish({
           type: "prompt.composed",
           runId,
           taskInput: task.input,
-          systemPrompt: enrichedContext.systemPrompt,
-          skillInstructions: enrichedContext.skillInstructions,
-          selectedSkills: enrichedContext.skillNames,
-          loadedDocuments: enrichedContext.docs.coreDocuments.map((document) => document.path),
-          workspaceRoot: enrichedContext.workspace.root,
+          systemPrompt: memoryContext.systemPrompt,
+          skillInstructions: memoryContext.skillInstructions,
+          selectedSkills: memoryContext.skillNames,
+          loadedDocuments: memoryContext.docs.coreDocuments.map((document) => document.path),
+          workspaceRoot: memoryContext.workspace.root,
+          memorySummary: memoryContext.memory.summary,
+          recentMemoryCount: memoryContext.memory.recentEntries.length,
         });
         deps.eventbus.publish({
           type: "run.heartbeat",
@@ -81,11 +90,21 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
         });
 
         const runResult = await withTimeout(
-          deps.runner.run(enrichedContext),
+          deps.runner.run(memoryContext),
           limits.runTimeoutMs,
           `Run exceeded timeout of ${limits.runTimeoutMs}ms.`,
         );
         success = true;
+        await deps.memory.rememberRun({
+          runId,
+          taskId: task.id,
+          sessionId: task.sessionId,
+          taskInput: task.input,
+          finalAnswer: runResult.finalAnswer,
+          stepsUsed: runResult.stepsUsed,
+          toolSummaryCount: runResult.toolSummaries.length,
+          success,
+        });
 
         const report = {
           runId,
@@ -94,8 +113,8 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
           success,
           startedAt,
           finishedAt: new Date().toISOString(),
-          selectedSkills: enrichedContext.skillNames,
-          loadedDocuments: enrichedContext.docs.coreDocuments.map((document) => document.path),
+          selectedSkills: memoryContext.skillNames,
+          loadedDocuments: memoryContext.docs.coreDocuments.map((document) => document.path),
           stepsUsed: runResult.stepsUsed,
           finalAnswer: runResult.finalAnswer,
           toolSummaryCount: runResult.toolSummaries.length,
@@ -121,6 +140,16 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         const failureKind = error instanceof TimeoutError ? "timeout" : "runtime";
+        await deps.memory.rememberRun({
+          runId,
+          taskId: task.id,
+          sessionId: task.sessionId,
+          taskInput: task.input,
+          finalAnswer: "",
+          stepsUsed: 0,
+          toolSummaryCount: 0,
+          success,
+        });
         deps.reportLogger.write({
           ts: new Date().toISOString(),
           event: "run.report",

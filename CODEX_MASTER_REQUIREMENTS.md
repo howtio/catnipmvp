@@ -75,7 +75,7 @@
 核心架构：
 
 ```text
-Gateway -> Queue -> Worker -> Harness -> Context -> Skills -> Runner -> EventBus -> Tool Registry -> Executor
+Gateway -> Queue -> Worker -> Harness -> Context -> Skills -> Memory -> Runner -> EventBus -> Tool Registry -> Executor
 ```
 
 ---
@@ -89,6 +89,7 @@ Worker 消费
 Harness 管 run
 Context 准备资料
 Skills 提供方法
+Memory 整理记忆
 Runner 做决策
 EventBus 传事件
 Tool Registry 管工具定义
@@ -116,13 +117,13 @@ Executor 执行副作用
 - Redis
 - 数据库
 - 多 Agent
-- 长期记忆
+- 外部长期记忆
 - 远程部署
 - 发布到 npm
 
 ---
 
-## 6. 十层职责总表
+## 6. 11 层职责总表（含 06.5）
 
 ### 01 Gateway
 
@@ -197,6 +198,22 @@ Executor 执行副作用
 - 读取 Skill 文本
 - 注入方法说明
 
+### 06.5 Memory
+
+职责：
+
+- 读取 session 级短期记忆
+- 提炼最近 run 摘要
+- 注入 memory context
+- 在 run 结束后统一回写记忆
+
+禁止：
+
+- 不读写 workspace 文件
+- 不执行 shell
+- 不直接调用模型
+- 不直接接数据库、向量库或远程存储
+
 ### 07 Runner
 
 职责：
@@ -204,6 +221,12 @@ Executor 执行副作用
 - 驱动模型循环
 - 决策是否调用工具
 - 后续接入 DeepSeek provider
+
+禁止：
+
+- 不直接执行工具
+- 不直接维护 session memory
+- 不绕过 Memory 自行缓存历史
 
 ### 08 EventBus
 
@@ -303,7 +326,7 @@ Executor 执行副作用
 - DeepSeek 只接到 `07-runner`
 - 不允许把 DeepSeek 逻辑散落到其他层
 - 必须先抽象 provider adapter，再接具体模型
-- Context、Skills、Harness、Executor 必须保持模型无关
+- Context、Skills、Memory、Harness、Executor 必须保持模型无关
 
 后续建议顺序：
 
@@ -465,6 +488,7 @@ DeepSeek 接入
 - `docs/progress/layers/04-harness.md`
 - `docs/progress/layers/05-context.md`
 - `docs/progress/layers/06-skills.md`
+- `docs/progress/layers/06.5-memory.md`
 - `docs/progress/layers/07-runner.md`
 - `docs/progress/layers/08-eventbus.md`
 - `docs/progress/layers/09-tool-registry.md`
@@ -571,7 +595,7 @@ DeepSeek 接入
 当前建议的下一步开发顺序：
 
 1. 初始化 TypeScript 基础文件
-2. 补齐十层 `wrapper.ts / types.ts / index.ts` 空骨架
+2. 补齐分层 `wrapper.ts / types.ts / index.ts` 空骨架，并允许 `06.5-memory` 采用同样结构
 3. 固化 `.env.example`、`.gitignore` 和安全占位规则
 4. 再开始 Phase 1 的 Queue 与 Worker 骨架实现
 

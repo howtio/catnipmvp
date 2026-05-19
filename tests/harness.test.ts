@@ -2,11 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { setTimeout as delay } from "node:timers/promises";
 import { createHarnessLayer } from "../src/layers/04-harness/index.js";
+import { createMemoryLayer } from "../src/layers/06.5-memory/index.js";
 import { TimeoutError } from "../src/shared/errors/TimeoutError.js";
 
 test("harness fails a run when runner exceeds timeout", async () => {
   const publishedEvents: Array<{ type: string; [key: string]: unknown }> = [];
   const reports: Array<Record<string, unknown>> = [];
+  const memory = createMemoryLayer();
   const harness = createHarnessLayer({
     context: {
       async buildContext(runId, task) {
@@ -30,6 +32,7 @@ test("harness fails a run when runner exceeds timeout", async () => {
         };
       },
     },
+    memory,
     runner: {
       async run() {
         await delay(50);

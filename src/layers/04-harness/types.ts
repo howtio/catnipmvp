@@ -1,6 +1,7 @@
 import type { RunTask } from "../../shared/types/runTask.js";
 import type { RunContext } from "../05-context/index.js";
 import type { EnrichedRunContext } from "../06-skills/index.js";
+import type { MemoryEnrichedRunContext } from "../06.5-memory/index.js";
 import type { RunnerRunResult } from "../07-runner/index.js";
 
 export interface HarnessRunLimits {
@@ -28,8 +29,21 @@ export interface HarnessLayerDeps {
   skills: {
     injectSkills(context: RunContext): Promise<EnrichedRunContext>;
   };
+  memory: {
+    hydrateContext(context: EnrichedRunContext): Promise<MemoryEnrichedRunContext>;
+    rememberRun(input: {
+      runId: string;
+      taskId: string;
+      sessionId: string;
+      taskInput: string;
+      finalAnswer: string;
+      stepsUsed: number;
+      toolSummaryCount: number;
+      success: boolean;
+    }): Promise<void>;
+  };
   runner: {
-    run(context: EnrichedRunContext): Promise<RunnerRunResult>;
+    run(context: MemoryEnrichedRunContext): Promise<RunnerRunResult>;
   };
   eventbus: {
     publish(event: { type: string; [key: string]: unknown }): void;

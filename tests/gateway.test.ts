@@ -103,7 +103,7 @@ test("buildCliStartupArtLines uses the large cat art", () => {
   const lines = buildCliStartupArtLines();
 
   assert.ok(lines.length >= 20);
-  assert.equal(lines[0], "/\\_________________________/\\\\");
+  assert.equal(lines[0], "                 /\\_________________________/\\\\");
   assert.match(lines.join("\n"), /::::::@@::::::/);
 });
 

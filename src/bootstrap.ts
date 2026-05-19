@@ -4,6 +4,7 @@ import { createWorkerLayer } from "./layers/03-worker/index.js";
 import { createHarnessLayer } from "./layers/04-harness/index.js";
 import { createContextLayer } from "./layers/05-context/index.js";
 import { createSkillsLayer } from "./layers/06-skills/index.js";
+import { createMemoryLayer } from "./layers/06.5-memory/index.js";
 import { createRunnerLayer, createRunnerProviderFromEnv } from "./layers/07-runner/index.js";
 import { createEventBusLayer } from "./layers/08-eventbus/index.js";
 import { createToolRegistryLayer } from "./layers/09-tool-registry/index.js";
@@ -90,10 +91,12 @@ export function bootstrapCatnipAgent() {
     },
   });
   const skills = createSkillsLayer();
+  const memory = createMemoryLayer();
   const context = createContextLayer();
   const harness = createHarnessLayer({
     context,
     skills,
+    memory,
     runner,
     eventbus,
     reportLogger: jsonlLogger,
@@ -123,6 +126,7 @@ export function bootstrapCatnipAgent() {
     harness,
     context,
     skills,
+    memory,
     runner,
     eventbus,
     toolRegistry,

@@ -2,16 +2,14 @@
 
 ## 当前目标
 
-Phase 0 先搭建目录和文档骨架，确保后续实现有明确边界和施工顺序。
+在现有 CLI Agent MVP 上补出 `06.5-memory` 层，先完成文档、计划和分层边界，再补代码与测试。
 
 ## 非目标
 
-- 不写 TypeScript 实现代码
-- 不创建可运行 CLI
-- 不接入 AI SDK
-- 不接入 DeepSeek
-- 不实现真实 Tool
-- 不写测试逻辑
+- 不引入数据库或向量库
+- 不做跨进程长期记忆
+- 不让 Runner 自己维护隐式历史状态
+- 不破坏既有十层职责边界
 
 ## Phase 0：项目骨架
 
@@ -111,6 +109,21 @@ Phase 0 先搭建目录和文档骨架，确保后续实现有明确边界和施
 - `logs/catnip.jsonl` 可追加记录
 - `docs/LOG.md` 按施工记录更新
 - final report 输出修改摘要、风险、回滚建议
+
+## Phase 6.5：Memory
+
+目标：
+
+- 在 `06-skills` 与 `07-runner` 之间加入 `06.5-memory`
+- 固化 Context / Skills / Memory / Runner 的输入输出边界
+- 让 session 级短期记忆可被注入和回写
+
+验收标准：
+
+- 存在 `src/layers/06.5-memory`
+- Harness 串联 `Context -> Skills -> Memory -> Runner`
+- 记忆至少覆盖最近任务输入、最终回答、工具摘要计数
+- 相关测试通过
 
 ## DeepSeek 接入计划
 

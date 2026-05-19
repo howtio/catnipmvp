@@ -7,15 +7,15 @@ import {
   createRunnerProviderFromEnv,
   summarizeToolOutcome,
 } from "../src/layers/07-runner/index.js";
+import type { MemoryEnrichedRunContext } from "../src/layers/06.5-memory/index.js";
 
-test("heuristic runner provider plans multiple tool calls for combined task", async () => {
-  const provider = createHeuristicRunnerProvider();
-  const plan = await provider.plan({
+function createTestRunnerContext(taskInput: string): MemoryEnrichedRunContext {
+  return {
     runId: "run_test",
     task: {
       id: "task_test",
       sessionId: "session_test",
-      input: "write file then patch file and shell status",
+      input: taskInput,
       status: "pending",
       createdAt: new Date().toISOString(),
     },
@@ -32,7 +32,17 @@ test("heuristic runner provider plans multiple tool calls for combined task", as
     skills: [],
     skillNames: [],
     skillInstructions: "",
-  }, [
+    memory: {
+      sessionId: "session_test",
+      recentEntries: [],
+      summary: "No prior session memory is available.",
+    },
+  };
+}
+
+test("heuristic runner provider plans multiple tool calls for combined task", async () => {
+  const provider = createHeuristicRunnerProvider();
+  const plan = await provider.plan(createTestRunnerContext("write file then patch file and shell status"), [
     { name: "write_file", description: "Write file", permission: "medium" },
     { name: "patch_file", description: "Patch file", permission: "medium" },
     { name: "shell_exec", description: "Shell exec", permission: "medium" },
@@ -46,29 +56,7 @@ test("heuristic runner provider plans multiple tool calls for combined task", as
 
 test("heuristic runner provider can plan write html then open browser", async () => {
   const provider = createHeuristicRunnerProvider();
-  const plan = await provider.plan({
-    runId: "run_test",
-    task: {
-      id: "task_test",
-      sessionId: "session_test",
-      input: "create file html and open browser run html",
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-    docs: {
-      coreDocuments: [],
-    },
-    workspace: {
-      root: "/workspace",
-      topLevelEntries: [],
-      layerDirectories: [],
-    },
-    sessionHistory: [],
-    systemPrompt: "prompt",
-    skills: [],
-    skillNames: [],
-    skillInstructions: "",
-  }, [
+  const plan = await provider.plan(createTestRunnerContext("create file html and open browser run html"), [
     { name: "write_file", description: "Write file", permission: "medium" },
     { name: "open_browser", description: "Open browser", permission: "medium" },
   ]);
@@ -83,29 +71,7 @@ test("heuristic runner provider can plan write html then open browser", async ()
 
 test("heuristic runner provider can plan web search and browser search", async () => {
   const provider = createHeuristicRunnerProvider();
-  const plan = await provider.plan({
-    runId: "run_test",
-    task: {
-      id: "task_test",
-      sessionId: "session_test",
-      input: "web search latest catnip agent and open browser search",
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-    docs: {
-      coreDocuments: [],
-    },
-    workspace: {
-      root: "/workspace",
-      topLevelEntries: [],
-      layerDirectories: [],
-    },
-    sessionHistory: [],
-    systemPrompt: "prompt",
-    skills: [],
-    skillNames: [],
-    skillInstructions: "",
-  }, [
+  const plan = await provider.plan(createTestRunnerContext("web search latest catnip agent and open browser search"), [
     { name: "web_search", description: "Web search", permission: "medium" },
     { name: "open_browser_search", description: "Open browser search", permission: "medium" },
   ]);
@@ -120,23 +86,7 @@ test("heuristic runner provider can plan web search and browser search", async (
 
 test("heuristic runner provider can plan opening a url", async () => {
   const provider = createHeuristicRunnerProvider();
-  const plan = await provider.plan({
-    runId: "run_test",
-    task: {
-      id: "task_test",
-      sessionId: "session_test",
-      input: "open url https://example.com and click into it",
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-    docs: { coreDocuments: [] },
-    workspace: { root: "/workspace", topLevelEntries: [], layerDirectories: [] },
-    sessionHistory: [],
-    systemPrompt: "prompt",
-    skills: [],
-    skillNames: [],
-    skillInstructions: "",
-  }, [
+  const plan = await provider.plan(createTestRunnerContext("open url https://example.com and click into it"), [
     { name: "open_url", description: "Open url", permission: "medium" },
   ]);
 
@@ -170,29 +120,10 @@ test("createRunnerProviderFromEnv falls back to heuristic in auto mode without k
     CATNIP_RUNNER_PROVIDER: "auto",
   });
 
-  const plan = await provider.plan({
-    runId: "run_test",
-    task: {
-      id: "task_test",
-      sessionId: "session_test",
-      input: "list files",
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-    docs: {
-      coreDocuments: [],
-    },
-    workspace: {
-      root: "/workspace",
-      topLevelEntries: [],
-      layerDirectories: [],
-    },
-    sessionHistory: [],
-    systemPrompt: "prompt",
-    skills: [],
-    skillNames: [],
-    skillInstructions: "",
-  }, [{ name: "list_files", description: "List files", permission: "low" }]);
+  const plan = await provider.plan(
+    createTestRunnerContext("list files"),
+    [{ name: "list_files", description: "List files", permission: "low" }],
+  );
 
   assert.equal(plan.plannedToolCalls[0]?.toolName, "list_files");
 });
@@ -239,23 +170,7 @@ test("runner stops planned execution at configured max steps", async () => {
   });
 
   await assert.rejects(
-    runner.run({
-      runId: "run_test",
-      task: {
-        id: "task_test",
-        sessionId: "session_test",
-        input: "write file then patch file and shell status",
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      },
-      docs: { coreDocuments: [] },
-      workspace: { root: "/workspace", topLevelEntries: [], layerDirectories: [] },
-      sessionHistory: [],
-      systemPrompt: "prompt",
-      skills: [],
-      skillNames: [],
-      skillInstructions: "",
-    }),
+    runner.run(createTestRunnerContext("write file then patch file and shell status")),
     /step limit reached/i,
   );
 
@@ -321,23 +236,7 @@ test("runner can continue after tool failure when configured", async () => {
     },
   });
 
-  const result = await runner.run({
-    runId: "run_test",
-    task: {
-      id: "task_test",
-      sessionId: "session_test",
-      input: "update file",
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-    docs: { coreDocuments: [] },
-    workspace: { root: "/workspace", topLevelEntries: [], layerDirectories: [] },
-    sessionHistory: [],
-    systemPrompt: "prompt",
-    skills: [],
-    skillNames: [],
-    skillInstructions: "",
-  });
+  const result = await runner.run(createTestRunnerContext("update file"));
 
   assert.equal(result.stepsUsed, 2);
   assert.equal(result.toolSummaries.length, 2);

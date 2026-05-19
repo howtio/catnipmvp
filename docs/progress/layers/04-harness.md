@@ -217,3 +217,33 @@
 
 - 可继续补阶段级 timeout
 - 或补底层取消传播
+
+## 2026-05-19 / Harness / 串联 06.5 Memory 层
+
+### 当前目标
+
+让 Harness 不再直接把 Skills 输出交给 Runner，而是在中间插入 `06.5-memory` 做记忆注入和回写。
+
+### 本次完成
+
+- Harness 依赖新增 `memory`
+- `run.heartbeat` 新增 `memory.hydrate.started`
+- `prompt.composed` 新增 `memorySummary`
+- `prompt.composed` 新增 `recentMemoryCount`
+- 主链路改为 `Context -> Skills -> Memory -> Runner`
+- 成功 run 后回写 memory
+- 失败 run 后也写入最小 memory 条目
+
+### 当前状态
+
+- 已完成：Harness 与 Memory 的主链路编排
+- 进行中：失败路径仍只写最小摘要
+- 未完成：更细粒度记忆回写策略和验收报告联动
+
+### 风险与阻塞
+
+- 当前 run 失败时记忆条目没有保存错误摘要
+
+### 下一步
+
+- 可继续补 failure-aware memory summary

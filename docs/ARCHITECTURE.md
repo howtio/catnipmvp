@@ -6,12 +6,12 @@ Catnip Agent 是一个本地运行的最小可控 Coding Agent Runtime。
 
 当前阶段只建设骨架，不实现真实工具执行，不接入真实模型调用。
 
-## 十层架构
+## 11 层架构（含 06.5）
 
 调用顺序固定为：
 
 ```text
-Gateway -> Queue -> Worker -> Harness -> Context -> Skills -> Runner -> EventBus -> Tool Registry -> Executor
+Gateway -> Queue -> Worker -> Harness -> Context -> Skills -> Memory -> Runner -> EventBus -> Tool Registry -> Executor
 ```
 
 各层职责摘要：
@@ -22,6 +22,7 @@ Gateway -> Queue -> Worker -> Harness -> Context -> Skills -> Runner -> EventBus
 4. Harness：管理单次 run 生命周期。
 5. Context：准备文档、workspace 摘要和系统上下文。
 6. Skills：注入施工方法说明，不执行动作。
+6.5. Memory：管理 session/run 级记忆的提取、压缩和回写。
 7. Runner：负责模型决策和受控循环。
 8. EventBus：传递 run 与 tool 事件。
 9. Tool Registry：定义和注册工具。
@@ -54,5 +55,5 @@ Gateway -> Queue -> Worker -> Harness -> Context -> Skills -> Runner -> EventBus
 
 - Runner 层负责模型决策接口。
 - Harness 层不依赖具体模型供应商。
-- Context 与 Skills 产出模型无关输入。
+- Context、Skills 与 Memory 共同产出模型无关输入。
 - 后续可以将 DeepSeek 作为默认 provider 接入 Runner。

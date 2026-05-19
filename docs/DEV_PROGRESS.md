@@ -80,6 +80,16 @@
 - 固化 GitHub 主线命名规则：当前主线名 `catnipent 1.0`
 - 固化 GitHub 上传记录规则：每次上传都要标记改动部分，`docs/LOG.md` 必写版本号
 - 完成浏览器打开链接工具：`open_url`
+- 完成 `06.5-memory` 文档设计并插入架构、流程、计划与分层日志索引
+- 完成 `06.5-memory` 代码骨架：`README.md`、`types.ts`、`wrapper.ts`、`index.ts`
+- 完成 Harness 串联升级：`Context -> Skills -> Memory -> Runner`
+- 完成 session 级短期记忆闭环：注入最近任务摘要、run 后回写记忆
+- 完成 CLI 层状态显示：新增 `06.5-memory`
+- 完成 prompt 组合事件扩展：`memorySummary`、`recentMemoryCount`
+- 完成新增测试：`tests/memory.test.ts`
+- `npm run typecheck` 通过
+- `npm run build` 通过
+- `npm test` 通过，47 个测试全部通过
 - 完成单猫启动进入动画
 - 默认 `CATNIP_RUNNER_MAX_STEPS` 从 `5` 提升到 `10`
 - 强化主施工文档：新增每次开工前与每次收尾强制清单
@@ -129,3 +139,4 @@
 当前安全状态：真实 API Key 不得写入仓库文档，需本地保管并建议轮换。
 当前文档状态：子目录文档已从占位说明提升为可执行说明。
 当前工程状态：已具备可 typecheck 的 TypeScript 骨架，但业务逻辑仍是占位实现。
+当前架构状态：已从原十层升级为 `11` 层结构，其中 `06.5-memory` 固定插在 `06-skills` 与 `07-runner` 之间。

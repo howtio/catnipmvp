@@ -1,5 +1,99 @@
 # Construction Log
 
+## 2026-05-19 / Memory / 插入 06.5 层并按 2.0 上传
+
+### 版本
+
+- `catnipent 2.0`
+
+### 目标
+
+按新版本要求把 `06.5-memory` 正式插入 `06-skills` 与 `07-runner` 之间，先改开发文档，再落地最小 session memory 闭环，并补测试、日志和上传记录。
+
+### 开工检查
+
+- 当前分支：`feat/cli-handtest`
+- 本轮开发前基线提交：`39afe1a0a7393da212fa8c1b1f6c137b62d37f92`
+- 开发前远端备份分支：`backup/pre-memory-2-0-20260519-2108`
+- 当前工作区存在既有未跟踪文件，已避开，不做覆盖或回滚
+
+### 本次修改
+
+- 架构从原十层升级为含 `06.5-memory` 的 `11` 层结构
+- 更新总工程指令、架构文档、层契约、Agent Loop、施工计划与总进度
+- 新增 `docs/progress/layers/06.5-memory.md`
+- 新增 `src/layers/06.5-memory/README.md`
+- 新增 `src/layers/06.5-memory/types.ts`
+- 新增 `src/layers/06.5-memory/wrapper.ts`
+- 新增 `src/layers/06.5-memory/index.ts`
+- Harness 主链路改为 `Context -> Skills -> Memory -> Runner`
+- Memory 以 `sessionId` 维护进程内短期记忆
+- Memory 注入最近任务输入、最终回答、步数和工具摘要计数
+- Runner、provider、事件类型和 CLI 时间线同步适配 Memory 层
+- 新增 `tests/memory.test.ts`
+- 修正既有 CLI 启动画测试断言
+
+### 改动部分
+
+- 分层架构：`06.5-memory`
+- 运行编排：Harness / Runner / prompt 事件
+- CLI 观测：memory stage 与记忆计数
+- 文档和日志：`catnipent 2.0`
+- 测试：memory 新增覆盖与既有用例修正
+
+### 修改文件
+
+- CODEX_MASTER_REQUIREMENTS.md
+- docs/AGENT_LOOP.md
+- docs/ARCHITECTURE.md
+- docs/CONSTRUCTION_PLAN.md
+- docs/DEV_PROGRESS.md
+- docs/LAYER_CONTRACT.md
+- docs/LOG.md
+- docs/progress/README.md
+- docs/progress/layers/01-gateway.md
+- docs/progress/layers/04-harness.md
+- docs/progress/layers/06.5-memory.md
+- docs/progress/layers/07-runner.md
+- src/bootstrap.ts
+- src/layers/01-gateway/wrapper.ts
+- src/layers/04-harness/types.ts
+- src/layers/04-harness/wrapper.ts
+- src/layers/06.5-memory/README.md
+- src/layers/06.5-memory/index.ts
+- src/layers/06.5-memory/types.ts
+- src/layers/06.5-memory/wrapper.ts
+- src/layers/07-runner/provider.ts
+- src/layers/07-runner/types.ts
+- src/layers/07-runner/wrapper.ts
+- src/shared/types/event.ts
+- tests/gateway.test.ts
+- tests/harness.test.ts
+- tests/memory.test.ts
+- tests/runner.test.ts
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，47 个测试全部通过
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 如需回滚，可回到开发前基线提交 `39afe1a0a7393da212fa8c1b1f6c137b62d37f92`
+- 暂不执行回滚
+
+### 风险
+
+- 当前 memory 仅为进程内短期记忆，重启后不会保留
+- heuristic provider 还未主动利用结构化记忆字段，当前主要通过 `systemPrompt` 生效
+
+### 下一步
+
+- 可继续补记忆摘要压缩与偏好抽取
+- 可继续让 heuristic provider 参考最近记忆避免重复动作
+
 ## 2026-05-19 / CLI + Browser / 单猫动画、打开链接与更长思维链路
 
 ### 版本

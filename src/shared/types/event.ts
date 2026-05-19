@@ -34,6 +34,8 @@ export type CatnipEvent =
       selectedSkills: string[];
       loadedDocuments: string[];
       workspaceRoot: string;
+      memorySummary?: string;
+      recentMemoryCount?: number;
     }
   | {
       type: "agent.plan.generated";

@@ -1,4 +1,4 @@
-import type { EnrichedRunContext } from "../06-skills/index.js";
+import type { MemoryEnrichedRunContext } from "../06.5-memory/index.js";
 import type { ToolCallFailedEvent, ToolCallResultEvent } from "../08-eventbus/index.js";
 import type { AvailableTool, RunnerProvider } from "./provider.js";
 import type { RunnerRunResult } from "./planner.js";
@@ -20,5 +20,5 @@ export interface RunnerLayerDeps {
 }
 
 export interface RunnerLayerApi {
-  run(context: EnrichedRunContext): Promise<RunnerRunResult>;
+  run(context: MemoryEnrichedRunContext): Promise<RunnerRunResult>;
 }

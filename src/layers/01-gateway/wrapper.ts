@@ -55,18 +55,18 @@ const STARTUP_ANIMATION_FRAME_DELAY_MS = 45;
 
 export function buildCliStartupArtLines(): string[] {
   return [
-    "/\\_________________________/\\\\",
+    "                 /\\_________________________/\\\\",
     "              __/  \\\\_______________________/  \\\\__",
     "            _/:::::::::::::::::::::::::::::::::::::\\\\_",
     "          _/:::::::::::::::::::::::::::::::::::::::::\\\\_",
     "         /:::::::::::::::::::::::::::::::::::::::::::::\\\\",
     "        /:::::::::::::::::::::::::::::::::::::::::::::::\\\\",
-    "       |:::::::::::::::::::::::::::::::::::::::::::::::::|",
-    "       |:::::::::::::::   o                 o   ::::::::|",
-    "       |::::::::::::::::                           ::::::|",
-    "       |::::::::::::::::           ___             ::::::|",
+    "       |:::::::::::::::::::::::::::::::::::::::::::::: :::|",
+    "       |:::::::::::::::   o                 o       ::::::|",
+    "       |::::::::::::::::                            ::::::|",
+    "       |::::::::::::::::           ___              ::::::|",
     "       |::::::::::::::::          \\\\___/            ::::::|",
-    "       |:::::::::::::::::::::::::::::::::::::::::::::::::|",
+    "       |:::::::::::::::::::::::::::::::::::::::::::: :::::|",
     "        \\\\:::::::::::::::::::::::::::::::::::::::::::::::/",
     "         \\\\:::::::::::::::::::::::::::::::::::::::::::::/",
     "          \\\\_:::::::::::::::::::::::::::::::::::::::::_/",
@@ -293,6 +293,10 @@ function formatLayerStage(stage: string): string {
 
   if (stage.startsWith("skills.")) {
     return "06-skills";
+  }
+
+  if (stage.startsWith("memory.")) {
+    return "06.5-memory";
   }
 
   if (stage.startsWith("runner.")) {
@@ -712,9 +716,11 @@ function setupCliEventPrinter(
       updateRunActivity(runId, "prompt.composed");
       const skills = readEventField(event, "selectedSkills");
       const docs = readEventField(event, "loadedDocuments");
+      const recentMemoryCount = readEventField(event, "recentMemoryCount");
       const skillCount = Array.isArray(skills) ? skills.length : 0;
       const documentCount = Array.isArray(docs) ? docs.length : 0;
-      console.log(`[context] ${formatTaskLabel(task)} docs=${documentCount} skills=${skillCount}`);
+      const memoryCount = typeof recentMemoryCount === "number" ? recentMemoryCount : 0;
+      console.log(`[context] ${formatTaskLabel(task)} docs=${documentCount} skills=${skillCount} memory=${memoryCount}`);
       printDebug(event);
     }),
     deps.eventbus.subscribe("agent.plan.generated", (event) => {

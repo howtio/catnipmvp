@@ -1,7 +1,7 @@
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { generateObject, generateText, stepCountIs, tool as defineTool } from "ai";
 import { z } from "zod";
-import type { EnrichedRunContext } from "../06-skills/index.js";
+import type { MemoryEnrichedRunContext } from "../06.5-memory/index.js";
 import type { PermissionLevel } from "../../shared/types/permission.js";
 import { buildFinalAnswer } from "./planner.js";
 import type { RunnerRunResult, ToolExecutionSummary } from "./planner.js";
@@ -25,9 +25,9 @@ export interface RunnerStepPlan {
 }
 
 export interface RunnerProvider {
-  plan(context: EnrichedRunContext, availableTools: AvailableTool[]): Promise<RunnerStepPlan>;
+  plan(context: MemoryEnrichedRunContext, availableTools: AvailableTool[]): Promise<RunnerStepPlan>;
   runWithTools?(
-    context: EnrichedRunContext,
+    context: MemoryEnrichedRunContext,
     availableTools: AvailableTool[],
     helpers: {
       executeToolCall(plannedCall: PlannedToolCall): Promise<ToolExecutionSummary>;
@@ -186,7 +186,7 @@ function summarizeAiSdkToolResult(toolResult: { toolName: string; output: unknow
 
 export function createHeuristicRunnerProvider(): RunnerProvider {
   return {
-    async plan(context: EnrichedRunContext): Promise<RunnerStepPlan> {
+    async plan(context: MemoryEnrichedRunContext): Promise<RunnerStepPlan> {
       const taskInput = context.task.input.toLowerCase();
       const plannedToolCalls: PlannedToolCall[] = [];
 
@@ -356,7 +356,7 @@ export function createAiSdkRunnerProvider(options: AiSdkRunnerProviderOptions = 
   const model = options.model ?? process.env.AI_GATEWAY_MODEL ?? "deepseek/deepseek-v3.2";
 
   return {
-    async plan(context: EnrichedRunContext, availableTools: AvailableTool[]): Promise<RunnerStepPlan> {
+    async plan(context: MemoryEnrichedRunContext, availableTools: AvailableTool[]): Promise<RunnerStepPlan> {
       const toolList = availableTools
         .map((tool) => `- ${tool.name} (${tool.permission}): ${tool.description}`)
         .join("\n");
@@ -421,7 +421,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
   const toolMap = new Map<string, AvailableTool>();
 
   return {
-    async plan(context: EnrichedRunContext, availableTools: AvailableTool[]): Promise<RunnerStepPlan> {
+    async plan(context: MemoryEnrichedRunContext, availableTools: AvailableTool[]): Promise<RunnerStepPlan> {
       const toolList = availableTools
         .map((tool) => `- ${tool.name} (${tool.permission}): ${tool.description}`)
         .join("\n");
@@ -460,7 +460,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
         finalAnswerPrompt: object.finalAnswerPrompt,
       };
     },
-    async runWithTools(context: EnrichedRunContext, availableTools: AvailableTool[], helpers) {
+    async runWithTools(context: MemoryEnrichedRunContext, availableTools: AvailableTool[], helpers) {
       toolMap.clear();
       const toolSummaries: ToolExecutionSummary[] = [];
       for (const tool of availableTools) {

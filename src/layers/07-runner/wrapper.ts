@@ -1,5 +1,5 @@
 import type { RunnerLayerApi, RunnerLayerDeps } from "./types.js";
-import type { EnrichedRunContext } from "../06-skills/index.js";
+import type { MemoryEnrichedRunContext } from "../06.5-memory/index.js";
 import { createId } from "../../shared/utils/createId.js";
 import { buildFinalAnswer, summarizeToolOutcome } from "./planner.js";
 import type { PermissionLevel } from "../../shared/types/permission.js";
@@ -19,7 +19,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
   };
 
   return {
-    async run(context: EnrichedRunContext) {
+    async run(context: MemoryEnrichedRunContext) {
       const runId = context.runId;
       const availableTools = deps.toolRegistry.listTools();
       let stepCount = 0;

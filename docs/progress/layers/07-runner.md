@@ -33,6 +33,34 @@
 - 继续细化失败分类与恢复策略
 - 或补更完整的 provider 级停止原因与运行验收
 
+## 2026-05-19 / Runner / 切换到 Memory 增强上下文
+
+### 当前目标
+
+让 Runner 消费 `06.5-memory` 增强后的上下文，而不是继续只依赖 Skills 注入结果。
+
+### 本次完成
+
+- Runner 输入类型切换为 `MemoryEnrichedRunContext`
+- Heuristic provider 输入类型切换为 `MemoryEnrichedRunContext`
+- AI SDK provider 输入类型切换为 `MemoryEnrichedRunContext`
+- DeepSeek provider 输入类型切换为 `MemoryEnrichedRunContext`
+- 现有 Runner 测试上下文补齐 `memory` 字段
+
+### 当前状态
+
+- 已完成：Runner 与 provider 接口适配 Memory 层
+- 进行中：heuristic 规划仍主要依赖任务文本，不主动利用记忆字段
+- 未完成：基于记忆的规划偏好与重复操作抑制
+
+### 风险与阻塞
+
+- 当前真实收益主要体现在模型 `systemPrompt` 上，规则型 provider 还没消费记忆内容
+
+### 下一步
+
+- 可继续让 heuristic provider 参考最近记忆，减少重复读写
+
 ## 2026-05-18 / Phase 0 / 初始化
 
 ### 当前目标

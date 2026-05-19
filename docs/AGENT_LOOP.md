@@ -13,12 +13,14 @@
 4. Harness 创建 run
 5. Context 构建上下文
 6. Skills 注入施工说明
-7. Runner 驱动模型循环
-8. Runner 通过 EventBus 请求工具
-9. Executor 执行工具
-10. EventBus 返回工具结果
-11. Runner 输出最终回答
-12. Harness 生成 final report
+7. Memory 注入 session/run 记忆
+8. Runner 驱动模型循环
+9. Runner 通过 EventBus 请求工具
+10. Executor 执行工具
+11. EventBus 返回工具结果
+12. Runner 输出最终回答
+13. Memory 回写本次 run 摘要
+14. Harness 生成 final report
 ```
 
 ## Runner 约束
@@ -27,6 +29,13 @@
 - 不直接读写文件
 - 不直接执行 shell
 - 只能通过 EventBus 发起工具请求
+- 不自己拼接和持久化记忆
+
+## Memory 约束
+
+- 先做 session/run 级短期记忆，不默认做跨进程长期记忆
+- 先做受控摘要，不把全部历史原样塞给 Runner
+- 记忆写入由 Memory 层统一收口，不让 Gateway 或 Runner 各自缓存一份
 
 ## Step 控制
 
