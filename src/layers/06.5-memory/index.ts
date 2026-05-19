@@ -4,6 +4,9 @@ export type {
   MemoryEnrichedRunContext,
   MemoryLayerApi,
   MemoryLayerDeps,
+  MemoryObservation,
   MemorySnapshot,
+  MemoryToolSummary,
+  MemoryWorkingSet,
   RememberRunInput,
 } from "./types.js";

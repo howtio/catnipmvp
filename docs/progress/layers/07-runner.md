@@ -61,6 +61,37 @@
 
 - 可继续让 heuristic provider 参考最近记忆，减少重复读写
 
+## 2026-05-19 / Runner / 用 working memory 解析连续指代任务
+
+### 当前目标
+
+解决 Runner 在连续会话里仍反复 `list_files` 的问题，让它在 Memory 已知焦点对象时优先命中焦点对象。
+
+### 本次完成
+
+- heuristic provider 新增 referential task 识别
+- heuristic provider 新增 focused artifact 读取策略
+- heuristic provider 新增 focused html 打开策略
+- AI SDK 规划 prompt 注入 working memory 摘要
+- DeepSeek 规划 prompt 注入 working memory 摘要
+- DeepSeek tool-calling system prompt 注入 working memory 规则
+- 增加用例：`打开这个游戏`
+- 增加用例：`这个跳一跳有问题，条的物理引擎错了`
+
+### 当前状态
+
+- 已完成：Runner 能显式消费 Memory 工作集
+- 进行中：复杂多对象会话仍主要依赖最近焦点
+- 未完成：基于 memory 的更细粒度规划压缩和重复工具调用抑制
+
+### 风险与阻塞
+
+- 当前指代解析仍是规则优先，不是完整实体链接系统
+
+### 下一步
+
+- 可继续补“同类多个 html 产物”时的冲突解析
+
 ## 2026-05-18 / Phase 0 / 初始化
 
 ### 当前目标

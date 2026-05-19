@@ -36,6 +36,13 @@ function createTestRunnerContext(taskInput: string): MemoryEnrichedRunContext {
       sessionId: "session_test",
       recentEntries: [],
       summary: "No prior session memory is available.",
+      workingSet: {
+        recentFilePaths: [],
+        openableHtmlPaths: [],
+        recentDirectoryPaths: [],
+        recentUrls: [],
+        recentQueries: [],
+      },
     },
   };
 }
@@ -92,6 +99,46 @@ test("heuristic runner provider can plan opening a url", async () => {
 
   assert.equal(plan.plannedToolCalls[0]?.toolName, "open_url");
   assert.equal(plan.plannedToolCalls[0]?.args.url, "https://example.com");
+});
+
+test("heuristic runner provider opens focused html artifact from memory", async () => {
+  const provider = createHeuristicRunnerProvider();
+  const context = createTestRunnerContext("打开这个游戏");
+  context.memory.summary = "Focused openable HTML: workspaces/demo/jump_game.html";
+  context.memory.workingSet.focusedFilePath = "workspaces/demo/jump_game.html";
+  context.memory.workingSet.focusedOpenableHtmlPath = "workspaces/demo/jump_game.html";
+  context.memory.workingSet.recentFilePaths = ["workspaces/demo/jump_game.html"];
+  context.memory.workingSet.openableHtmlPaths = ["workspaces/demo/jump_game.html"];
+
+  const plan = await provider.plan(context, [
+    { name: "open_browser", description: "Open browser", permission: "medium" },
+  ]);
+
+  assert.deepEqual(
+    plan.plannedToolCalls.map((step) => step.toolName),
+    ["open_browser"],
+  );
+  assert.equal(plan.plannedToolCalls[0]?.args.path, "workspaces/demo/jump_game.html");
+});
+
+test("heuristic runner provider reads focused artifact for referential bug fix task", async () => {
+  const provider = createHeuristicRunnerProvider();
+  const context = createTestRunnerContext("这个跳一跳有问题，条的物理引擎错了");
+  context.memory.summary = "Focused file: workspaces/demo/jump_game.html";
+  context.memory.workingSet.focusedFilePath = "workspaces/demo/jump_game.html";
+  context.memory.workingSet.focusedOpenableHtmlPath = "workspaces/demo/jump_game.html";
+  context.memory.workingSet.recentFilePaths = ["workspaces/demo/jump_game.html"];
+  context.memory.workingSet.openableHtmlPaths = ["workspaces/demo/jump_game.html"];
+
+  const plan = await provider.plan(context, [
+    { name: "read_file", description: "Read file", permission: "low" },
+  ]);
+
+  assert.deepEqual(
+    plan.plannedToolCalls.map((step) => step.toolName),
+    ["read_file"],
+  );
+  assert.equal(plan.plannedToolCalls[0]?.args.path, "workspaces/demo/jump_game.html");
 });
 
 test("summarizeToolOutcome and buildFinalAnswer produce readable output", () => {

@@ -40,6 +40,13 @@ export interface HarnessLayerDeps {
       stepsUsed: number;
       toolSummaryCount: number;
       success: boolean;
+      toolSummaries: Array<{
+        toolName: string;
+        ok: boolean;
+        reason: string;
+        result?: unknown;
+        error?: string;
+      }>;
     }): Promise<void>;
   };
   runner: {

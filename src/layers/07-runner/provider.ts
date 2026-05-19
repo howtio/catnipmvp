@@ -55,6 +55,100 @@ function includesAny(input: string, patterns: string[]): boolean {
   return patterns.some((pattern) => input.includes(pattern));
 }
 
+function hasReferentialLanguage(input: string): boolean {
+  return includesAny(input, [
+    "this game",
+    "this page",
+    "this file",
+    "open it",
+    "fix it",
+    "update it",
+    "that game",
+    "that page",
+    "这个游戏",
+    "这个页面",
+    "这个文件",
+    "这个 html",
+    "这个html",
+    "这个",
+    "那个",
+    "它",
+    "上一个",
+    "刚才",
+    "刚刚",
+    "之前那个",
+  ]);
+}
+
+function hasExplicitWorkspacePath(input: string): boolean {
+  return /(?:^|\s)(?:workspaces\/|docs\/|src\/|tests\/)[^\s]+/i.test(input);
+}
+
+function pickFocusedFilePath(context: MemoryEnrichedRunContext, options: { preferOpenableHtml?: boolean } = {}): string | undefined {
+  if (options.preferOpenableHtml) {
+    return context.memory.workingSet.focusedOpenableHtmlPath
+      ?? context.memory.workingSet.openableHtmlPaths[0]
+      ?? context.memory.workingSet.focusedFilePath;
+  }
+
+  return context.memory.workingSet.focusedFilePath
+    ?? context.memory.workingSet.focusedOpenableHtmlPath
+    ?? context.memory.workingSet.recentFilePaths[0];
+}
+
+function shouldInspectFocusedArtifact(taskInput: string): boolean {
+  return includesAny(taskInput, [
+    "fix",
+    "bug",
+    "issue",
+    "problem",
+    "broken",
+    "physics",
+    "update",
+    "modify",
+    "adjust",
+    "修",
+    "改",
+    "问题",
+    "错",
+    "物理",
+    "优化",
+    "调整",
+  ]);
+}
+
+function shouldOpenFocusedArtifact(taskInput: string): boolean {
+  return includesAny(taskInput, [
+    "open browser",
+    "open html",
+    "preview html",
+    "run html",
+    "open game",
+    "open this game",
+    "打开页面",
+    "打开游戏",
+    "打开这个游戏",
+    "打开这个页面",
+    "预览",
+    "运行这个页面",
+    "打开它",
+  ]);
+}
+
+function buildWorkingMemoryPrompt(context: MemoryEnrichedRunContext): string {
+  const workingSet = context.memory.workingSet;
+
+  return [
+    "Current working memory:",
+    `- Focused file: ${workingSet.focusedFilePath ?? "none"}`,
+    `- Focused openable HTML: ${workingSet.focusedOpenableHtmlPath ?? "none"}`,
+    `- Openable HTML artifacts: ${workingSet.openableHtmlPaths.join(", ") || "none"}`,
+    `- Recent files: ${workingSet.recentFilePaths.join(", ") || "none"}`,
+    "When the user refers to 'this game', 'this page', 'this file', '这个游戏', '这个页面', '这个文件' or 'open it', resolve that reference to the focused artifact before scanning the workspace.",
+    "Avoid listing directories just to rediscover an artifact that working memory already identifies.",
+  ].join("\n");
+}
+
 function deriveSearchQuery(taskInput: string): string {
   const stripped = taskInput
     .replace(/open browser search/gi, " ")
@@ -189,6 +283,24 @@ export function createHeuristicRunnerProvider(): RunnerProvider {
     async plan(context: MemoryEnrichedRunContext): Promise<RunnerStepPlan> {
       const taskInput = context.task.input.toLowerCase();
       const plannedToolCalls: PlannedToolCall[] = [];
+      const focusedOpenableHtmlPath = pickFocusedFilePath(context, { preferOpenableHtml: true });
+      const focusedFilePath = pickFocusedFilePath(context);
+
+      if (
+        focusedFilePath &&
+        !hasExplicitWorkspacePath(taskInput) &&
+        (hasReferentialLanguage(taskInput) || context.memory.workingSet.recentFilePaths.length > 0) &&
+        shouldInspectFocusedArtifact(taskInput)
+      ) {
+        plannedToolCalls.push(
+          buildPlannedToolCall(
+            "read_file",
+            "low",
+            { path: focusedFilePath },
+            "Read the focused artifact from working memory before scanning the workspace again.",
+          ),
+        );
+      }
 
       if (includesAny(taskInput, ["git diff", "diff"])) {
         plannedToolCalls.push(
@@ -269,16 +381,25 @@ export function createHeuristicRunnerProvider(): RunnerProvider {
 
       if (
         !requestsBrowserSearch &&
-        includesAny(taskInput, ["open browser", "open html", "preview html", "run html", "浏览器", "打开页面"])
+        (
+          includesAny(taskInput, ["open browser", "open html", "preview html", "run html", "浏览器", "打开页面"]) ||
+          (
+            focusedOpenableHtmlPath &&
+            !hasExplicitWorkspacePath(taskInput) &&
+            shouldOpenFocusedArtifact(taskInput)
+          )
+        )
       ) {
         plannedToolCalls.push(
           buildPlannedToolCall(
             "open_browser",
             "medium",
             {
-              path: "workspaces/demo/generated.html",
+              path: focusedOpenableHtmlPath ?? "workspaces/demo/generated.html",
             },
-            "Open the generated html file in the default browser.",
+            focusedOpenableHtmlPath
+              ? "Open the focused HTML artifact from working memory."
+              : "Open the generated html file in the default browser.",
           ),
         );
       }
@@ -368,6 +489,7 @@ export function createAiSdkRunnerProvider(options: AiSdkRunnerProviderOptions = 
         "Write generated preview artifacts under workspaces/demo unless the user explicitly names another workspace path.",
         "open_browser only accepts html files inside workspaces/demo.",
         "If the user wants to click through a search result or open a webpage, use open_url with an http or https result URL.",
+        buildWorkingMemoryPrompt(context),
         `Task: ${context.task.input}`,
         `Allowed tools:\n${toolList}`,
         `Workspace root: ${context.workspace.root}`,
@@ -433,6 +555,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
         "Write generated preview artifacts under workspaces/demo unless the user explicitly names another workspace path.",
         "open_browser only accepts html files inside workspaces/demo.",
         "If the user wants to click through a search result or open a webpage, use open_url with an http or https result URL.",
+        buildWorkingMemoryPrompt(context),
         `Task: ${context.task.input}`,
         `Allowed tools:\n${toolList}`,
         `Workspace root: ${context.workspace.root}`,
@@ -471,6 +594,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
         model: provider(model),
         system: [
           context.systemPrompt,
+          buildWorkingMemoryPrompt(context),
           "Use the available tools when they materially help solve the task.",
           "Do not invent tool names or parameters outside the schemas.",
         ].join("\n\n"),

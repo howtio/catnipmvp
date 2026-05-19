@@ -1,5 +1,83 @@
 # Construction Log
 
+## 2026-05-19 / Memory / working memory 大跨步，解决“这个游戏”连续上下文
+
+### 版本
+
+- `catnipent 2.1`
+
+### 目标
+
+解决同一进程连续任务里 Memory 只能记摘要、不能记工作对象的问题，让“改这个游戏”“打开这个游戏”不再先重新扫描 workspace。
+
+### 开工检查
+
+- 当前分支：`feat/cli-handtest`
+- 本轮开发前基线提交：`bb94f0ed6698554e91064ec9908778f5e6be59f9`
+- 开发前远端备份分支：`backup/pre-memory-working-set-20260519-2238`
+- 当前工作区存在既有未跟踪文件，已避开，不做覆盖或回滚
+
+### 本次修改
+
+- Memory 从摘要记忆升级为结构化 working memory
+- 新增 `observations`，从工具结果抽取最近工作对象
+- 新增 `workingSet`
+- 新增 `focusedFilePath`
+- 新增 `focusedOpenableHtmlPath`
+- 新增 `recentFilePaths`
+- 新增 `openableHtmlPaths`
+- Memory 可从 `write_file`、`read_file`、`patch_file`、`open_browser`、`list_files`、`shell_exec cp/mv` 抽取对象
+- Harness 把完整 `toolSummaries` 传给 Memory 回写
+- heuristic provider 优先用 working memory 解析“这个游戏 / 这个文件 / 打开它 / 修这个页面”
+- AI SDK / DeepSeek prompt 明确要求优先使用 working memory，避免重复扫描 workspace
+- 新增 Memory 与 Runner 连续指代测试
+
+### 改动部分
+
+- `06.5-memory`：结构化工作记忆
+- `04-harness`：tool summaries 回写
+- `07-runner`：连续指代解析与 prompt 强化
+- 文档与日志：`catnipent 2.1`
+- 测试：working memory 与 referential task
+
+### 修改文件
+
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/04-harness.md
+- docs/progress/layers/06.5-memory.md
+- docs/progress/layers/07-runner.md
+- src/layers/04-harness/types.ts
+- src/layers/04-harness/wrapper.ts
+- src/layers/06.5-memory/index.ts
+- src/layers/06.5-memory/types.ts
+- src/layers/06.5-memory/wrapper.ts
+- src/layers/07-runner/provider.ts
+- tests/memory.test.ts
+- tests/runner.test.ts
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，50 个测试全部通过
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 如需回滚，可回到开发前基线提交 `bb94f0ed6698554e91064ec9908778f5e6be59f9`
+- 暂不执行回滚
+
+### 风险
+
+- 当前 working memory 仍以“最近焦点”优先，不是完整实体链接系统
+- 多个相似 html 产物同时存在时，后续仍需要更强冲突消解
+
+### 下一步
+
+- 可继续补多文件焦点排序
+- 可继续补失败工具轨迹的 memory 保留
+
 ## 2026-05-19 / Memory / 插入 06.5 层并按 2.0 上传
 
 ### 版本

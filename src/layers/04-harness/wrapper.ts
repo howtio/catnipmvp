@@ -104,6 +104,7 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
           stepsUsed: runResult.stepsUsed,
           toolSummaryCount: runResult.toolSummaries.length,
           success,
+          toolSummaries: runResult.toolSummaries,
         });
 
         const report = {
@@ -149,6 +150,7 @@ export function createHarnessLayer(deps: HarnessLayerDeps): HarnessLayerApi {
           stepsUsed: 0,
           toolSummaryCount: 0,
           success,
+          toolSummaries: [],
         });
         deps.reportLogger.write({
           ts: new Date().toISOString(),

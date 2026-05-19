@@ -77,7 +77,7 @@
 - 完成网络搜索工具：`web_search`
 - 完成浏览器搜索工具：`open_browser_search`
 - 完成 runner 搜索链路：`web_search -> open_browser_search`
-- 固化 GitHub 主线命名规则：当前主线名 `catnipent 1.0`
+- 固化 GitHub 主线命名规则：当前默认主线名 `catnipent 2.0`，未明确要求前沿用 `2.x`
 - 固化 GitHub 上传记录规则：每次上传都要标记改动部分，`docs/LOG.md` 必写版本号
 - 完成浏览器打开链接工具：`open_url`
 - 完成 `06.5-memory` 文档设计并插入架构、流程、计划与分层日志索引
@@ -87,9 +87,14 @@
 - 完成 CLI 层状态显示：新增 `06.5-memory`
 - 完成 prompt 组合事件扩展：`memorySummary`、`recentMemoryCount`
 - 完成新增测试：`tests/memory.test.ts`
+- 完成 Memory 第二阶段大跨步：从摘要记忆升级为结构化 working memory
+- 完成 Memory 工作集：`focusedFilePath`、`focusedOpenableHtmlPath`、`recentFilePaths`、`openableHtmlPaths`
+- 完成 Memory 从工具结果抽取结构化观察：`write_file`、`read_file`、`patch_file`、`open_browser`、`list_files`、`shell_exec`
+- 完成 Runner heuristic 对 working memory 的显式消费，优先解析“这个游戏 / 这个文件 / 打开它 / 修这个页面”
+- 完成 provider prompt 强化：要求优先使用 working memory，避免重复扫描 workspace
 - `npm run typecheck` 通过
 - `npm run build` 通过
-- `npm test` 通过，47 个测试全部通过
+- `npm test` 通过，50 个测试全部通过
 - 完成单猫启动进入动画
 - 默认 `CATNIP_RUNNER_MAX_STEPS` 从 `5` 提升到 `10`
 - 强化主施工文档：新增每次开工前与每次收尾强制清单

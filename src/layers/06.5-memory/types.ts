@@ -1,5 +1,22 @@
 import type { EnrichedRunContext } from "../06-skills/index.js";
 
+export interface MemoryObservation {
+  type: "file" | "directory" | "url" | "query";
+  value: string;
+  toolName: string;
+  action: "read" | "write" | "patch" | "open" | "list" | "copy" | "move" | "search";
+  openable?: boolean;
+  observedAt: string;
+}
+
+export interface MemoryToolSummary {
+  toolName: string;
+  ok: boolean;
+  reason: string;
+  result?: unknown;
+  error?: string;
+}
+
 export interface MemoryEntry {
   runId: string;
   taskId: string;
@@ -9,12 +26,24 @@ export interface MemoryEntry {
   toolSummaryCount: number;
   success: boolean;
   recordedAt: string;
+  observations: MemoryObservation[];
+}
+
+export interface MemoryWorkingSet {
+  focusedFilePath?: string;
+  focusedOpenableHtmlPath?: string;
+  recentFilePaths: string[];
+  openableHtmlPaths: string[];
+  recentDirectoryPaths: string[];
+  recentUrls: string[];
+  recentQueries: string[];
 }
 
 export interface MemorySnapshot {
   sessionId: string;
   recentEntries: MemoryEntry[];
   summary: string;
+  workingSet: MemoryWorkingSet;
 }
 
 export interface MemoryEnrichedRunContext extends EnrichedRunContext {
@@ -30,6 +59,7 @@ export interface RememberRunInput {
   stepsUsed: number;
   toolSummaryCount: number;
   success: boolean;
+  toolSummaries: MemoryToolSummary[];
 }
 
 export interface MemoryLayerDeps {

@@ -247,3 +247,29 @@
 ### 下一步
 
 - 可继续补 failure-aware memory summary
+
+## 2026-05-19 / Harness / 把工具摘要完整交给 Memory 回写
+
+### 当前目标
+
+让 Memory 不再只拿到 `finalAnswer` 和计数，而是能看到真实工具执行摘要，从而抽取结构化工作对象。
+
+### 本次完成
+
+- `memory.rememberRun` 输入增加 `toolSummaries`
+- 成功 run 后把完整 `toolSummaries` 传给 Memory
+- 失败 run 仍传空摘要，保持接口一致
+
+### 当前状态
+
+- 已完成：Memory 可基于真实工具轨迹做结构化回写
+- 进行中：失败路径还没有更细粒度的失败工具轨迹
+- 未完成：更细 failure-aware artifact 保留
+
+### 风险与阻塞
+
+- 如果 provider 中途异常且无工具摘要，Memory 仍只能回写最小失败条目
+
+### 下一步
+
+- 可继续补失败路径工具轨迹保留
