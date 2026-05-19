@@ -52,6 +52,8 @@
 - 完成 prompt / plan / reasoning summary 事件落盘与实时打印
 - 完成 CLI 层状态线实时打印
 - 完成 `run.started / run.heartbeat / agent.step.finished / run.finished` 调试追踪
+- 强化主施工文档：新增每次开工前与每次收尾强制清单
+- 强化主施工文档：明确每轮代码开发都必须检查日志、push 与回滚判断
 - `npm run typecheck` 通过
 - `npm run build` 通过
 - `npm test` 通过
