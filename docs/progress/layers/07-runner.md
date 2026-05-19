@@ -253,3 +253,30 @@
 
 - 继续补 step/timeout/recovery 主线
 - 或给摘要输出增加裁剪和级别控制
+
+## 2026-05-19 / Debug / 扩展 step finished 可观测性
+
+### 当前目标
+
+让调试模式不仅能看见步骤摘要，还能看见每一步完成时 Runner 记录的 usage 结构。
+
+### 本次完成
+
+- CLI 订阅 `agent.step.finished`
+- 打印 `stepNumber`
+- 打印 `usage`
+- 与 `agent.reasoning.summary` 组合展示
+
+### 当前状态
+
+- 已完成：Runner 步骤前后都可观测
+- 进行中：usage 仍是原始对象直出
+- 未完成：usage 结构裁剪和分级
+
+### 风险与阻塞
+
+- usage 在复杂任务下可能较长
+
+### 下一步
+
+- 可继续做 summary/full 输出级别

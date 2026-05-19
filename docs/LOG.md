@@ -1108,3 +1108,56 @@
 
 - 可继续补调试输出级别
 - 或回到 Runner 的超时、步数上限和失败恢复
+
+## 2026-05-19 / Debug / CLI 实时显示当前运行层
+
+### 目标
+
+让用户在命令行调试时不需要自己推断事件归属，直接看到“现在运行到哪一层”，并继续扩大公开可观测过程。
+
+### 本次修改
+
+- Gateway 调试输出增加 layer status line
+- `run.started` 显示 `04-harness`
+- `run.heartbeat` 显示 `05-context`、`06-skills`、`07-runner`
+- `prompt.composed` 显示 `04-harness -> 07-runner`
+- `tool.call.requested` 显示 `08-eventbus -> 10-executor`
+- `tool.call.result / failed` 显示 `10-executor -> 08-eventbus`
+- `agent.step.finished` 显示 `07-runner`
+- `run.finished` 显示 `04-harness`
+- trace 日志补记 `run.started / run.finished / run.heartbeat / agent.step.finished`
+- README 增补 layer status line 说明
+
+### 修改文件
+
+- README.md
+- src/bootstrap.ts
+- src/layers/01-gateway/wrapper.ts
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/progress/layers/01-gateway.md
+- docs/progress/layers/07-runner.md
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，16 个测试全部通过
+- `CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js --debug "create file workspaces/demo/hello2.html and write a complete minimal html document whose body says 你好世界2"`：通过
+- 确认 CLI 实时打印层流转、计划、步骤摘要、工具轨迹与最终答案
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 仅进行了局部增强与验证
+- 因验证通过，不执行文件级回滚或提交级回滚
+
+### 风险
+
+- `--debug` 下输出量继续上升
+- 当前仍无法暴露隐藏推理链本身，只能输出公开调试摘要与步骤说明
+
+### 下一步
+
+- 可继续做 `summary/full` 调试级别
+- 或补更清晰的 TUI 风格层状态显示

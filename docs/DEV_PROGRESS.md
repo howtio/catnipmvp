@@ -50,6 +50,8 @@
 - 完成 CLI 调试输出：`--debug` 与 `CATNIP_CLI_DEBUG=1`
 - 完成本地 trace 日志：`logs/catnip-trace.jsonl`
 - 完成 prompt / plan / reasoning summary 事件落盘与实时打印
+- 完成 CLI 层状态线实时打印
+- 完成 `run.started / run.heartbeat / agent.step.finished / run.finished` 调试追踪
 - `npm run typecheck` 通过
 - `npm run build` 通过
 - `npm test` 通过
@@ -69,6 +71,7 @@
 - `node dist/src/main.js "readme and git diff"` 在增强版 CLI 输出下通过
 - `printf 'readme and git diff\\n/history\\n/clear\\n/history\\n/exit\\n' | node dist/src/main.js --interactive` 通过
 - `CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js --debug "readme and git diff"` 通过
+- `CATNIP_RUNNER_PROVIDER=deepseek node dist/src/main.js --debug "create file workspaces/demo/hello2.html and write a complete minimal html document whose body says 你好世界2"` 通过
 
 ### 未开始
 

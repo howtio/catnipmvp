@@ -150,13 +150,44 @@ function readEventField(event: EventBusEvent, fieldName: string): unknown {
   return (event as Record<string, unknown>)[fieldName];
 }
 
+function formatLayerStage(stage: string): string {
+  if (stage.startsWith("context.")) {
+    return "05-context";
+  }
+
+  if (stage.startsWith("skills.")) {
+    return "06-skills";
+  }
+
+  if (stage.startsWith("runner.")) {
+    return "07-runner";
+  }
+
+  return "04-harness";
+}
+
+function printLayerStatus(label: string, detail: string): void {
+  console.log(`[layer] ${label} ${detail}`);
+}
+
 function setupDebugOutput(deps: GatewayLayerDeps): () => void {
   if (!deps.eventbus) {
     return () => {};
   }
 
   const unsubscribers = [
+    deps.eventbus.subscribe("run.started", (event) => {
+      printLayerStatus("04-harness", `run.started runId=${formatDebugPayload(readEventField(event, "runId"))}`);
+    }),
+    deps.eventbus.subscribe("run.heartbeat", (event) => {
+      const stage = readEventField(event, "stage");
+      if (typeof stage !== "string") {
+        return;
+      }
+      printLayerStatus(formatLayerStage(stage), stage);
+    }),
     deps.eventbus.subscribe("prompt.composed", (event) => {
+      printLayerStatus("04-harness -> 07-runner", "prompt.composed");
       console.log("");
       console.log("[debug] prompt.composed");
       console.log(`[debug] task: ${formatDebugPayload(readEventField(event, "taskInput"))}`);
@@ -168,6 +199,7 @@ function setupDebugOutput(deps: GatewayLayerDeps): () => void {
       console.log(`[debug] loadedDocuments: ${formatDebugPayload(readEventField(event, "loadedDocuments"))}`);
     }),
     deps.eventbus.subscribe("agent.plan.generated", (event) => {
+      printLayerStatus("07-runner", "agent.plan.generated");
       console.log("");
       console.log(`[debug] agent.plan.generated mode=${formatDebugPayload(readEventField(event, "mode"))}`);
       console.log(
@@ -179,26 +211,41 @@ function setupDebugOutput(deps: GatewayLayerDeps): () => void {
       }
     }),
     deps.eventbus.subscribe("agent.reasoning.summary", (event) => {
+      printLayerStatus("07-runner", "agent.reasoning.summary");
       console.log(
         `[debug] step=${formatDebugPayload(readEventField(event, "stepNumber"))} summary=${formatDebugPayload(readEventField(event, "summary"))}`,
       );
     }),
+    deps.eventbus.subscribe("agent.step.finished", (event) => {
+      printLayerStatus("07-runner", `agent.step.finished step=${formatDebugPayload(readEventField(event, "stepNumber"))}`);
+      console.log(`[debug] stepUsage: ${formatDebugPayload(readEventField(event, "usage"))}`);
+    }),
     deps.eventbus.subscribe("tool.call.requested", (event) => {
+      printLayerStatus("08-eventbus -> 10-executor", "tool.call.requested");
       console.log(
         `[debug] tool.request tool=${formatDebugPayload(readEventField(event, "toolName"))} args=${formatDebugPayload(readEventField(event, "args"))}`,
       );
     }),
     deps.eventbus.subscribe("tool.call.result", (event) => {
+      printLayerStatus("10-executor -> 08-eventbus", "tool.call.result");
       console.log(
         `[debug] tool.result ok=${formatDebugPayload(readEventField(event, "ok"))} result=${formatDebugPayload(readEventField(event, "result"))}`,
       );
     }),
     deps.eventbus.subscribe("tool.call.failed", (event) => {
+      printLayerStatus("10-executor -> 08-eventbus", "tool.call.failed");
       console.log(`[debug] tool.failed error=${formatDebugPayload(readEventField(event, "error"))}`);
     }),
     deps.eventbus.subscribe("agent.answer.produced", (event) => {
+      printLayerStatus("07-runner", "agent.answer.produced");
       console.log("");
       console.log(`[debug] finalAnswer: ${formatDebugPayload(readEventField(event, "answer"))}`);
+    }),
+    deps.eventbus.subscribe("run.finished", (event) => {
+      printLayerStatus(
+        "04-harness",
+        `run.finished success=${formatDebugPayload(readEventField(event, "success"))}`,
+      );
     }),
   ];
 

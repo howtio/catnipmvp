@@ -21,3 +21,4 @@ its my mvp agent for catnipent
 - CLI realtime debug: `CATNIP_CLI_DEBUG=1 node dist/src/main.js --interactive`
 - Local trace log: `logs/catnip-trace.jsonl`
 - Core event log: `logs/catnip.jsonl`
+- Layer status lines: `04-harness`, `05-context`, `06-skills`, `07-runner`, `08-eventbus -> 10-executor`

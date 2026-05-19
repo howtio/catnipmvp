@@ -176,3 +176,33 @@
 
 - 可补 `--debug=summary|full` 之类的输出级别
 - 或继续优化 trace 日志可读性
+
+## 2026-05-19 / CLI / 实时显示当前运行层
+
+### 当前目标
+
+让 CLI 调试输出不只展示事件内容，还要明确告诉用户当前正在经过哪一层。
+
+### 本次完成
+
+- 为 `run.started` 打印 `04-harness`
+- 为 `run.heartbeat` 按 stage 映射到 `05-context`、`06-skills`、`07-runner`
+- 为 `prompt.composed` 打印 `04-harness -> 07-runner`
+- 为 `tool.call.requested` 打印 `08-eventbus -> 10-executor`
+- 为 `tool.call.result / failed` 打印 `10-executor -> 08-eventbus`
+- 为 `agent.step.finished` 打印 `07-runner`
+- 为 `run.finished` 打印 `04-harness`
+
+### 当前状态
+
+- 已完成：CLI 能实时显示当前运行层
+- 进行中：层状态和调试内容仍在同一输出流
+- 未完成：分栏显示、输出级别切换
+
+### 风险与阻塞
+
+- 长任务下层状态与调试摘要会混排，输出仍偏密
+
+### 下一步
+
+- 可补简洁模式和完整模式

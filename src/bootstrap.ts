@@ -13,9 +13,13 @@ import { loadLocalEnvFiles } from "./shared/utils/loadLocalEnv.js";
 import type { EventBusEvent } from "./layers/08-eventbus/index.js";
 
 const TRACE_EVENT_TYPES = new Set([
+  "run.started",
+  "run.finished",
+  "run.heartbeat",
   "prompt.composed",
   "agent.plan.generated",
   "agent.reasoning.summary",
+  "agent.step.finished",
   "tool.call.requested",
   "tool.call.result",
   "tool.call.failed",
