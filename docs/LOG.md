@@ -55,6 +55,15 @@
 - 验证：`"你是谁"` → Qwen 2.5 1.5B 正确回答（4s），DeepSeek-R1 1.5B 正确返回空工具计划
 - `.gitignore` 新增 `workspaces/demo/*` 防止运行时产物被提交
 
+### windows3.0 修复 2（2026-05-25）
+
+- **修复 heuristic fallback 不触发问题** — `allCallsAreDefault()` 对空数组返回 `false`，导致模型返回空工具计划时（"帮我写个python hello world"）heuristic 不会注入 `write_file`
+- **重构为 `modelProducedNoMeaningfulCalls()`** — 对空数组返回 `true`，使 heuristic 能正确捕获模型未理解工具调用的情况
+- **验证**：
+  - `"你是谁"` → 0 工具调用，Qwen 2.5 1.5B 直接回答（2.2s）
+  - `"帮我写个python hello world"` → 1 工具调用 `write_file`，写入 `workspaces/demo/task_output.py`（1.8s）
+- SEA 可执行文件使用 Node 24.13.1 适配的 sentinel 重新编译
+
 ### 回滚判断
 
 - 本轮未发生需要回滚的功能性错误

@@ -159,6 +159,8 @@
 - 更新 `start-catnip.cmd` — 支持 `start-catnip local` 直接启动本地模式
 - 更新 `provider.ts` createRunnerProviderFromEnv — `CATNIP_LOCAL_*` 环境变量触发本地模式
 - Ollama 已通过 winget 安装，作为 Windows 系统服务自动启动
+- 修复 `modelProducedNoMeaningfulCalls()` 对空数组返回 `true`，heuristic fallback 现在能正确注入 `write_file`
+- 验证：Q&A（"你是谁"→0 工具 2.2s）和写文件（"帮我写个python hello world"→1 工具 1.8s）均正常工作
 
 ### 未开始
 
