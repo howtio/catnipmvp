@@ -64,6 +64,15 @@
   - `"帮我写个python hello world"` → 1 工具调用 `write_file`，写入 `workspaces/demo/task_output.py`（1.8s）
 - SEA 可执行文件使用 Node 24.13.1 适配的 sentinel 重新编译
 
+### windows3.0 修复 3（2026-05-25）
+
+- **上下文不再加载开发文档** — `CODEX_MASTER_REQUIREMENTS.md`、`DEV_PROGRESS.md`、`LOG.md` 只在 `CATNIP_DEV_CONTEXT=1` 时加载。默认运行时 `docs=0`，模型不再收到无关的架构文档
+- **1.5B 模型写任务强制走 heuristic** — 写/创建类任务 (`写|创建|create|make|generate`) 完全忽略模型的工具计划，直接注入 `write_file`。1.5B 模型无法可靠做结构化工具规划
+- **验证**：
+  - `"你是谁"` → `docs=0`，0 工具，模型直接回答（3s）
+  - `"帮我写贪吃蛇python代码"` → `docs=0`，1 工具 `write_file`，写入 `task_output.py`（4.5s）
+  - `"给我一首关于天气的诗"` → `docs=0`，0 工具，模型直接回答（2s）
+
 ### 回滚判断
 
 - 本轮未发生需要回滚的功能性错误

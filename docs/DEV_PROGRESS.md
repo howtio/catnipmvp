@@ -161,6 +161,9 @@
 - Ollama 已通过 winget 安装，作为 Windows 系统服务自动启动
 - 修复 `modelProducedNoMeaningfulCalls()` 对空数组返回 `true`，heuristic fallback 现在能正确注入 `write_file`
 - 验证：Q&A（"你是谁"→0 工具 2.2s）和写文件（"帮我写个python hello world"→1 工具 1.8s）均正常工作
+- `CATNIP_DEV_CONTEXT=1` 控制开发文档加载，默认运行时 `docs=0`
+- 写任务强制 heuristic，完全忽略模型的工具计划（1.5B 模型不可靠）
+- 重建 catnip.exe（Node 24.13.1 sentinel）
 
 ### 未开始
 

@@ -9,11 +9,13 @@ const PLATFORM_HINT = platform === "win32"
   ? "Running on Windows. Use backslash paths. Write preview HTML to workspaces/demo/. Use 'dir' not 'ls'."
   : "Running on Unix-like system.";
 
-const CORE_DOCUMENT_PATHS = [
-  "CODEX_MASTER_REQUIREMENTS.md",
-  "docs/DEV_PROGRESS.md",
-  "docs/LOG.md",
-];
+const CORE_DOCUMENT_PATHS = process.env.CATNIP_DEV_CONTEXT === "1"
+  ? [
+      "CODEX_MASTER_REQUIREMENTS.md",
+      "docs/DEV_PROGRESS.md",
+      "docs/LOG.md",
+    ]
+  : [];
 
 async function summarizeDocument(workspaceRoot: string, relativePath: string): Promise<ContextDocumentSummary> {
   const absolutePath = join(workspaceRoot, relativePath);

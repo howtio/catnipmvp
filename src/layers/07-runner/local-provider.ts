@@ -311,28 +311,30 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
 
       const plannedToolCalls = normalizePlannedCalls(object.plannedToolCalls, availableTools);
 
-      // If model returned empty or default-only calls, it didn't plan properly
+      // 1.5B local model cannot reliably plan tools. Use heuristic for known task patterns.
+      const task = context.task.input;
+      const isWriteTask = /写|创建|create|make|generate|编写|产生/i.test(task);
+
+      if (isWriteTask) {
+        // Always use heuristic for write/create — model just adds noise
+        const ext = guessFileExtension(task);
+        const fileName = guessFileName(task, ext);
+        const path = fileName.startsWith("workspaces/") ? fileName : `workspaces/demo/${fileName}`;
+        const toolDef = availableTools.find((t) => t.name === "write_file");
+        const generatedContent = generateFileContent(ext, task, object.finalAnswerPrompt);
+        return {
+          plannedToolCalls: toolDef ? [{
+            toolName: "write_file",
+            permission: toolDef.permission,
+            args: { path, content: generatedContent },
+            reason: `Write ${fileName} as requested`,
+          }] : [],
+          finalAnswerPrompt: object.finalAnswerPrompt,
+        };
+      }
+
+      // For Q&A / info tasks: if model returned empty or default-only calls, answer directly
       if (modelProducedNoMeaningfulCalls(plannedToolCalls)) {
-        // Heuristic fallback: detect write/create tasks from user input
-        const task = context.task.input;
-        const isWriteTask = /写|创建|create|make|generate|编写|产生/i.test(task);
-        if (isWriteTask) {
-          const ext = guessFileExtension(task);
-          const fileName = guessFileName(task, ext);
-          const path = fileName.startsWith("workspaces/") ? fileName : `workspaces/demo/${fileName}`;
-          const toolDef = availableTools.find((t) => t.name === "write_file");
-          // Generate content based on extension and task context
-          const generatedContent = generateFileContent(ext, task, object.finalAnswerPrompt);
-          return {
-            plannedToolCalls: toolDef ? [{
-              toolName: "write_file",
-              permission: toolDef.permission,
-              args: { path, content: generatedContent },
-              reason: `Write ${fileName} as requested`,
-            }] : [],
-            finalAnswerPrompt: object.finalAnswerPrompt,
-          };
-        }
         return {
           plannedToolCalls: [],
           finalAnswerPrompt: object.finalAnswerPrompt,
