@@ -8,6 +8,20 @@ import type { ToolDefinition } from "../../shared/types/tool.js";
 
 const execFileAsync = promisify(execFile);
 
+const CMD_BUILTINS = new Set([
+  "dir", "type", "echo", "cd", "md", "rd", "copy", "move", "del", "ren",
+  "cls", "date", "time", "ver", "vol", "set", "path", "prompt", "title",
+  "pushd", "popd", "assoc", "ftype",
+]);
+
+async function shellExec(command: string, argv: string[], cwd: string): Promise<{ stdout: string; stderr: string }> {
+  if (platform === "win32" && CMD_BUILTINS.has(command.toLowerCase())) {
+    return execFileAsync("cmd", ["/c", command, ...argv], { cwd, maxBuffer: 1024 * 1024 });
+  }
+
+  return execFileAsync(command, argv, { cwd, maxBuffer: 1024 * 1024 });
+}
+
 export interface ExecuteToolCallArgs {
   workspaceRoot: string;
   tool: ToolDefinition;
@@ -112,15 +126,23 @@ async function executePatchFile(workspaceRoot: string, args: unknown): Promise<u
 }
 
 async function executeGitDiff(workspaceRoot: string): Promise<unknown> {
-  const { stdout } = await execFileAsync("git", ["diff", "--no-ext-diff", "--minimal"], {
-    cwd: workspaceRoot,
-    maxBuffer: 1024 * 1024,
-  });
+  try {
+    const { stdout } = await execFileAsync("git", ["diff", "--no-ext-diff", "--minimal"], {
+      cwd: workspaceRoot,
+      maxBuffer: 1024 * 1024,
+    });
 
-  return {
-    command: "git diff --no-ext-diff --minimal",
-    output: stdout,
-  };
+    return {
+      command: "git diff --no-ext-diff --minimal",
+      output: stdout,
+    };
+  } catch (error: unknown) {
+    return {
+      command: "git diff --no-ext-diff --minimal",
+      output: "",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 async function executeShellExec(workspaceRoot: string, args: unknown): Promise<unknown> {
@@ -133,10 +155,7 @@ async function executeShellExec(workspaceRoot: string, args: unknown): Promise<u
     Array.isArray(input.argv) && input.argv.every((value) => typeof value === "string")
       ? (input.argv as string[])
       : [];
-  const { stdout, stderr } = await execFileAsync(input.command, argv, {
-    cwd: workspaceRoot,
-    maxBuffer: 1024 * 1024,
-  });
+  const { stdout, stderr } = await shellExec(input.command, argv, workspaceRoot);
 
   return {
     command: input.command,

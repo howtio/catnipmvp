@@ -12,6 +12,28 @@ import { createExecutorLayer } from "./layers/10-executor/index.js";
 import { createJsonlLogger } from "./shared/logger/jsonlLogger.js";
 import { loadLocalEnvFiles } from "./shared/utils/loadLocalEnv.js";
 import type { EventBusEvent } from "./layers/08-eventbus/index.js";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const PROJECT_ROOT = getProjectRoot();
+
+function getProjectRoot(): string {
+  // When running as a SEA executable, use the exe's directory
+  if (process.execPath.endsWith("catnip.exe") || process.execPath.endsWith("catnip")) {
+    return dirname(process.execPath);
+  }
+  // When running as ESM module via node, use __dirname equivalent
+  try {
+    const modulePath = dirname(fileURLToPath(import.meta.url));
+    // Go up from src/ to project root
+    if (modulePath.endsWith("src")) {
+      return dirname(modulePath);
+    }
+  } catch {
+    // Fallback
+  }
+  return process.cwd();
+}
 
 const TRACE_EVENT_TYPES = new Set([
   "run.started",
@@ -57,10 +79,12 @@ function readNonNegativeIntegerEnv(name: string, fallback: number): number {
 }
 
 export function bootstrapCatnipAgent() {
-  loadLocalEnvFiles();
-  const jsonlLogger = createJsonlLogger();
+  loadLocalEnvFiles(PROJECT_ROOT);
+  const jsonlLogger = createJsonlLogger({
+    filePath: `${PROJECT_ROOT}/logs/catnip.jsonl`,
+  });
   const traceLogger = createJsonlLogger({
-    filePath: `${process.cwd()}/logs/catnip-trace.jsonl`,
+    filePath: `${PROJECT_ROOT}/logs/catnip-trace.jsonl`,
   });
   const eventbus = createEventBusLayer({
     logger: jsonlLogger,
@@ -76,7 +100,7 @@ export function bootstrapCatnipAgent() {
   const toolRegistry = createToolRegistryLayer();
   const runnerProvider = createRunnerProviderFromEnv();
   const executor = createExecutorLayer({
-    workspaceRoot: process.cwd(),
+    workspaceRoot: PROJECT_ROOT,
     eventbus,
     toolRegistry,
   });

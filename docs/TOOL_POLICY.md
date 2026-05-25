@@ -41,17 +41,16 @@
 - `open_browser_search`
 - `open_url`
 
-允许命令白名单：
+允许命令白名单（按命令名匹配，不限制参数）：
 
-- `npm test`
-- `npm run test`
-- `npm run build`
-- `pnpm test`
-- `pnpm build`
-- `git status`
-- `git diff`
-- `ls`
-- `cat`
+- `npm`
+- `pnpm`
+- `git`
+- `node`
+- `npx`
+- `ls`, `cat`, `pwd`
+- `dir`, `type`, `echo`, `cd`, `where` (Windows 兼容)
+- `cmd` (仅用于 Windows 内置命令包装)
 
 浏览器预览限制：
 

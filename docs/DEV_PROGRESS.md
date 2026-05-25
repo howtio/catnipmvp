@@ -130,6 +130,14 @@
 - `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "web search latest catnip agent runtime and open browser search"` 通过
 - `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "open url https://example.com/result"` 通过
 
+### 2026-05-25 进行中
+
+- Windows 平台兼容性优化（windows2.0）
+  - guard path 分隔符适配
+  - shell_exec Windows 内置命令支持
+  - 各层 provider/context system prompt 增加 Windows 提示
+  - 构建为独立 catnip.exe
+
 ### 未开始
 
 - GitHub 仓库实际接入
@@ -140,7 +148,7 @@
 
 本文件作为实时开发进度日志持续追加，不覆盖旧记录。
 后续所有 Codex 必须先读 `CODEX_MASTER_REQUIREMENTS.md` 再继续开发。
-当前 GitHub 状态：远程已接入，当前分支 `main` 已可 push。
+当前 GitHub 状态：远程已接入，当前分支 `main` 已可 push。注意：上传时不允许带 Claude Code 标签/签名。
 当前安全状态：真实 API Key 不得写入仓库文档，需本地保管并建议轮换。
 当前文档状态：子目录文档已从占位说明提升为可执行说明。
 当前工程状态：已具备可 typecheck 的 TypeScript 骨架，但业务逻辑仍是占位实现。

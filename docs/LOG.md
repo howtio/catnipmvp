@@ -1,6 +1,70 @@
 # Construction Log
 
-## 2026-05-19 / Memory / working memory 大跨步，解决“这个游戏”连续上下文
+## 2026-05-25 / Windows / windows2.0 平台兼容性优化与 SEA 独立 exe
+
+### 版本
+
+- `windows2.0`
+
+### 目标
+
+解决 DeepSeek 在 Windows 下运行的核心兼容性问题，包括路径分隔符、shell 命令白名单、系统提示、浏览器打开，并编译为独立双击可执行文件。
+
+### 本次修改
+
+- **guard.ts**：路径检查统一使用 `/` 分隔符比较（`normalizePathSeparators`），消除 `\` 与 `/` 不匹配问题；shell 命令白名单从严格 argv 匹配改为命令名白名单 + 危险前缀黑名单；browser 路径检查使用统一分隔符
+- **tools.ts**：新增 `shellExec` 辅助函数，Windows 下自动通过 `cmd /c` 运行内置命令（`dir`、`type`、`echo` 等）；`git_diff` 容错处理（git 未安装时不抛异常）
+- **provider.ts**：新增 `PLATFORM_HINT`，在 DeepSeek / AI SDK planner prompt 和 `runWithTools` system prompt 中告知模型当前为 Windows 环境，推荐使用 `dir`/`type`/`echo` 等命令
+- **context/wrapper.ts**：新增 `PLATFORM_HINT`，base system prompt 中加入 Windows 说明；`workspaceRoot` 改为支持 `CATNIP_WORKSPACE_ROOT` 环境变量
+- **bootstrap.ts**：新增 `PROJECT_ROOT` 检测逻辑，SEA exe 模式下使用 `process.execPath` 所在目录，避免双击 exe 时 cwd 不匹配；所有文件路径统一使用 `PROJECT_ROOT`
+- **gateway/wrapper.ts**：新增 `isStandaloneExe()`，双击 exe 无参数时自动进入交互模式
+- **CODEX_MASTER_REQUIREMENTS.md**：新增 GitHub 上传禁止规则（宪法级：不允许 Claude Code 标签/签名）
+- **catnip.exe**：首次编译为 Node.js SEA 单文件可执行程序（92MB），双击即可运行
+- **start-catnip.cmd**：双击启动器，自动加载密钥、编译、进入交互模式
+
+### 修改文件
+
+- CODEX_MASTER_REQUIREMENTS.md
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- docs/TOOL_POLICY.md
+- src/bootstrap.ts
+- src/layers/01-gateway/wrapper.ts
+- src/layers/05-context/wrapper.ts
+- src/layers/07-runner/provider.ts
+- src/layers/10-executor/guard.ts
+- src/layers/10-executor/tools.ts
+- catnip.exe (新增)
+- start-catnip.cmd (新增)
+- .local-secrets/deepseek.env (新增，gitignored)
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `node dist/src/main.js "hello"`：通过（DeepSeek 真实调用）
+- `./catnip.exe "hello"`：通过（SEA exe 独立运行）
+- `./catnip.exe` 双击无参数 → 自动进入交互模式验证通过
+- 交互模式 `"你是谁"` → DeepSeek 返回正确回答
+- DeepSeek tool calling 链路：`write_file` → `list_files` → `shell_exec` → 模型回答验证通过
+
+### 回滚判断
+
+- 本轮不涉及 git 回滚（当前 Windows 目录未初始化 git 仓库）
+- 如需要可手动还原 src/ 和 docs/ 下的修改
+
+### 风险
+
+- `catnip.exe` (92MB) 体积较大，因内嵌了完整 Node.js 运行时
+- `cmd /c` 包装的内置命令可能不支持所有参数组合
+- Windows 下 `git` 命令依赖 Git for Windows 是否在 PATH
+- SEA exe 的数字签名因注入 blob 已失效，Windows Defender 可能报未知发布者
+
+### 下一步
+
+- 初始化 git 仓库并将 windows2.0 上传到 GitHub（不带 Claude 标签）
+- 继续补 Windows shell 命令的更多兼容测试
+- 可考虑 `.gitignore` 添加 `catnip.exe`
 
 ### 版本
 

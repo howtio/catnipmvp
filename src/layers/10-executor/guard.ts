@@ -1,20 +1,20 @@
 import { PolicyError } from "../../shared/errors/PolicyError.js";
 import { extname, resolve } from "node:path";
+import { platform } from "node:process";
 import type { PermissionLevel } from "../../shared/types/permission.js";
 import type { ToolDefinition } from "../../shared/types/tool.js";
 import type { GuardResult, ToolCallRequest } from "./types.js";
 
-const ALLOWED_SHELL_COMMANDS = [
-  ["npm", "test"],
-  ["npm", "run", "test"],
-  ["npm", "run", "build"],
-  ["pnpm", "test"],
-  ["pnpm", "build"],
-  ["git", "status"],
-  ["git", "diff"],
-  ["ls"],
-  ["cat"],
-] as const;
+const ALLOWED_SHELL_COMMAND_NAMES = new Set([
+  "npm", "pnpm", "git", "node", "npx",
+  "ls", "cat", "pwd",
+  "dir", "type", "echo", "cd", "where", "cmd",
+]);
+
+const DANGEROUS_COMMAND_PREFIXES = [
+  "rm", "del", "format", "reg", "shutdown", "taskkill",
+  "chmod", "chown", "sudo", "deltree", "rd", "rmdir",
+];
 
 interface GuardToolCallDeps {
   workspaceRoot: string;
@@ -47,13 +47,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function normalizePathSeparators(value: string): string {
+  return value.replaceAll("\\", "/");
+}
+
 function ensurePathInsideWorkspace(workspaceRoot: string, candidatePath: unknown): void {
   if (typeof candidatePath !== "string" || candidatePath.length === 0) {
     throw new PolicyError("Tool call path must be a non-empty string.");
   }
 
-  const resolvedPath = resolve(workspaceRoot, candidatePath);
-  const normalizedRoot = resolve(workspaceRoot);
+  const resolvedPath = normalizePathSeparators(resolve(workspaceRoot, candidatePath));
+  const normalizedRoot = normalizePathSeparators(resolve(workspaceRoot));
   if (resolvedPath !== normalizedRoot && !resolvedPath.startsWith(`${normalizedRoot}/`)) {
     throw new PolicyError("Tool call path is outside the active workspace.");
   }
@@ -94,16 +98,19 @@ function ensureShellArgs(args: unknown): void {
     throw new PolicyError("shell_exec requires a command string.");
   }
 
-  const argv = ensureStringArray(args.argv, "shell_exec argv");
-  const requested = [args.command, ...argv];
-  const allowed = ALLOWED_SHELL_COMMANDS.some(
-    (candidate) =>
-      candidate.length === requested.length &&
-      candidate.every((segment, index) => requested[index] === segment),
-  );
+  const commandName = args.command.toLowerCase();
+  if (!ALLOWED_SHELL_COMMAND_NAMES.has(commandName)) {
+    throw new PolicyError(
+      `shell_exec command is not allowed: ${args.command}. Allowed: ${[...ALLOWED_SHELL_COMMAND_NAMES].sort().join(", ")}`,
+    );
+  }
 
-  if (!allowed) {
-    throw new PolicyError(`shell_exec command is not allowed: ${requested.join(" ")}`);
+  const argv = ensureStringArray(args.argv, "shell_exec argv");
+  const fullCommand = [args.command, ...argv].join(" ");
+  for (const dangerous of DANGEROUS_COMMAND_PREFIXES) {
+    if (fullCommand.toLowerCase().startsWith(dangerous)) {
+      throw new PolicyError(`shell_exec command is denied: ${fullCommand}`);
+    }
   }
 }
 
@@ -122,7 +129,7 @@ function ensureBrowserArgs(args: unknown, workspaceRoot: string): void {
     throw new PolicyError("open_browser only allows .html or .htm files.");
   }
 
-  const normalizedPath = args.path.replaceAll("\\", "/");
+  const normalizedPath = normalizePathSeparators(args.path);
   if (!normalizedPath.startsWith("workspaces/demo/")) {
     throw new PolicyError("open_browser only allows files inside workspaces/demo/.");
   }

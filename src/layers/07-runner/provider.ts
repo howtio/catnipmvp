@@ -1,10 +1,16 @@
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { generateObject, generateText, stepCountIs, tool as defineTool } from "ai";
 import { z } from "zod";
+import { platform } from "node:process";
 import type { MemoryEnrichedRunContext } from "../06.5-memory/index.js";
 import type { PermissionLevel } from "../../shared/types/permission.js";
 import { buildFinalAnswer } from "./planner.js";
 import type { RunnerRunResult, ToolExecutionSummary } from "./planner.js";
+
+const IS_WINDOWS = platform === "win32";
+const PLATFORM_HINT = IS_WINDOWS
+  ? "This agent runs on Windows. Use Windows paths (backslash separators). Workspace root is the project directory. HTML preview files MUST be written under workspaces/demo/ relative to the project root. Use 'dir' instead of 'ls', 'type' instead of 'cat'. Git commands require Git for Windows on PATH."
+  : "This agent runs on Unix-like system.";
 
 export interface AvailableTool {
   name: string;
@@ -484,6 +490,7 @@ export function createAiSdkRunnerProvider(options: AiSdkRunnerProviderOptions = 
 
       const prompt = [
         "You are planning tool usage for a coding agent runtime.",
+        PLATFORM_HINT,
         "Return only tool calls that exist in the allowed tool list.",
         "Prefer the minimum number of tool calls needed to answer the task.",
         "Write generated preview artifacts under workspaces/demo unless the user explicitly names another workspace path.",
@@ -550,6 +557,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
 
       const prompt = [
         "You are planning tool usage for a coding agent runtime.",
+        PLATFORM_HINT,
         "Return only tool calls that exist in the allowed tool list.",
         "Prefer the minimum number of tool calls needed to answer the task.",
         "Write generated preview artifacts under workspaces/demo unless the user explicitly names another workspace path.",
@@ -595,6 +603,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
         system: [
           context.systemPrompt,
           buildWorkingMemoryPrompt(context),
+          PLATFORM_HINT,
           "Use the available tools when they materially help solve the task.",
           "Do not invent tool names or parameters outside the schemas.",
         ].join("\n\n"),

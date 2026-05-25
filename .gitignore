@@ -1,7 +1,18 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+
+# Secrets
 .env
 .env.local
 .env.*.local
-logs/*.jsonl
 .local-secrets/
+
+# Logs
+logs/
+
+# SEA executable (regeneratable build artifact)
+catnip.exe
+sea-prep.blob

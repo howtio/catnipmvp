@@ -53,6 +53,10 @@ const RESET_ANSI = "\u001b[0m";
 const INTERACTIVE_PROMPT = "catnip> ";
 const STARTUP_ANIMATION_FRAME_DELAY_MS = 45;
 
+function isStandaloneExe(): boolean {
+  return process.execPath.endsWith("catnip.exe") || process.execPath.endsWith("catnip");
+}
+
 export function buildCliStartupArtLines(): string[] {
   return [
     "                 /\\_________________________/\\\\",
@@ -1292,6 +1296,12 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
       }
 
       if (parsed.interactive || process.stdin.isTTY) {
+        await startInteractiveCli();
+        return;
+      }
+
+      // When running as a standalone .exe with no args, default to interactive
+      if (mergedTasks.length === 0 && isStandaloneExe()) {
         await startInteractiveCli();
         return;
       }

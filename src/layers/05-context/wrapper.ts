@@ -1,8 +1,13 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { platform } from "node:process";
 import type { ContextLayerApi } from "./types.js";
 import type { RunTask } from "../../shared/types/runTask.js";
 import type { ContextDocumentSummary, RunContext, WorkspaceSummary } from "./types.js";
+
+const PLATFORM_HINT = platform === "win32"
+  ? "Running on Windows. Use backslash paths. Write preview HTML to workspaces/demo/. Use 'dir' not 'ls'."
+  : "Running on Unix-like system.";
 
 const CORE_DOCUMENT_PATHS = [
   "CODEX_MASTER_REQUIREMENTS.md",
@@ -45,7 +50,7 @@ async function buildWorkspaceSummary(workspaceRoot: string): Promise<WorkspaceSu
 export function createContextLayer(): ContextLayerApi {
   return {
     async buildContext(runId: string, task: RunTask): Promise<RunContext> {
-      const workspaceRoot = process.cwd();
+      const workspaceRoot = process.env.CATNIP_WORKSPACE_ROOT || process.cwd();
       const [coreDocuments, workspace] = await Promise.all([
         Promise.all(CORE_DOCUMENT_PATHS.map((path) => summarizeDocument(workspaceRoot, path))),
         buildWorkspaceSummary(workspaceRoot),
@@ -62,8 +67,9 @@ export function createContextLayer(): ContextLayerApi {
         systemPrompt: [
           "You are Catnip Agent running inside a controlled local CLI MVP.",
           "Respect the ten-layer architecture and keep side effects out of Runner.",
+          PLATFORM_HINT,
           `Current task: ${task.input}`,
-        ].join(" "),
+        ].join("\n"),
       };
     },
   };
