@@ -27,7 +27,12 @@ function getProjectRoot(): string {
     const modulePath = dirname(fileURLToPath(import.meta.url));
     // Go up from src/ to project root
     if (modulePath.endsWith("src")) {
-      return dirname(modulePath);
+      const candidate = dirname(modulePath);
+      // Compiled output lives in dist/src/ — go up one more level
+      if (candidate.endsWith("dist")) {
+        return dirname(candidate);
+      }
+      return candidate;
     }
   } catch {
     // Fallback

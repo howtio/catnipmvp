@@ -24,20 +24,6 @@ export interface LocalRunnerProviderOptions {
   ollamaBinaryPath?: string;
 }
 
-function buildPlannedToolCall(
-  toolName: string,
-  permission: PermissionLevel,
-  args: Record<string, unknown>,
-  reason: string,
-): PlannedToolCall {
-  return {
-    toolName,
-    permission,
-    args,
-    reason,
-  };
-}
-
 function normalizePlannedToolArgs(toolName: string, args: Record<string, unknown>): Record<string, unknown> {
   switch (toolName) {
     case "list_files":
@@ -158,7 +144,7 @@ const aiSdkPlanSchema = z.object({
       reason: z.string(),
     }),
   ),
-  finalAnswerPrompt: z.string(),
+  finalAnswerPrompt: z.string().describe("The final answer to the user's task. If no tools were needed, answer the question directly here. This is what the user will see as the result."),
 });
 
 async function checkOllamaRunning(host: string): Promise<boolean> {
@@ -191,7 +177,7 @@ async function pullOllamaModel(host: string, model: string): Promise<void> {
 
 export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = {}): RunnerProvider {
   const host = options.host ?? process.env.CATNIP_LOCAL_HOST ?? OLLAMA_DEFAULT_HOST;
-  const model = options.model ?? process.env.CATNIP_LOCAL_MODEL ?? "deepseek-r1:1.5b";
+  const model = options.model ?? process.env.CATNIP_LOCAL_MODEL ?? "qwen2.5:1.5b";
   let modelReady = false;
 
   const olp = createOpenAI({
@@ -245,7 +231,9 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
         PLATFORM_HINT,
         `You are running locally with model: ${model}`,
         "Return only tool calls that exist in the allowed tool list.",
-        "Prefer the minimum number of tool calls needed to answer the task.",
+        "If the task is a simple question (greeting, introduction, chat, general knowledge) that doesn't need any tools, return an empty plannedToolCalls array and answer the user's question directly in finalAnswerPrompt.",
+        "Prefer the minimum number of tool calls needed to answer the task. Only use tools when the task actually requires reading files, writing files, running commands, or searching the web.",
+        "IMPORTANT: finalAnswerPrompt must contain your direct answer to the user's task, not an explanation of your tool choices. The user will read this as the response.",
         "Write generated preview artifacts under workspaces/demo unless the user explicitly names another workspace path.",
         "open_browser only accepts html files inside workspaces/demo.",
         "If the user wants to click through a search result or open a webpage, use open_url with an http or https result URL.",
@@ -264,16 +252,7 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
       const plannedToolCalls = normalizePlannedCalls(object.plannedToolCalls, availableTools);
 
       return {
-        plannedToolCalls: plannedToolCalls.length > 0
-          ? plannedToolCalls
-          : [
-              buildPlannedToolCall(
-                "list_files",
-                "low",
-                { path: "." },
-                "Fallback to a safe default because the model returned no valid tool calls.",
-              ),
-            ],
+        plannedToolCalls,
         finalAnswerPrompt: object.finalAnswerPrompt,
       };
     },

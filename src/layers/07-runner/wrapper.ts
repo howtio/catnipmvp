@@ -158,7 +158,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
           type: "agent.reasoning.summary",
           runId,
           stepNumber: 1,
-          summary: "No tool calls were planned for this task.",
+          summary: "No tool calls planned. Using model's direct answer.",
         });
         deps.eventbus.publish({
           type: "agent.step.finished",
@@ -169,9 +169,14 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
             contextKeys: Object.keys(context),
           },
         });
+        deps.eventbus.publish({
+          type: "agent.answer.produced",
+          runId,
+          answer: plan.finalAnswerPrompt,
+        });
         return {
           stepsUsed: 0,
-          finalAnswer: "No tool calls were executed.",
+          finalAnswer: plan.finalAnswerPrompt,
           toolSummaries: [],
         };
       }
