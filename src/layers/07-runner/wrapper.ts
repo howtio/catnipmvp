@@ -191,7 +191,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
         await executeToolCall(plannedCall);
       }
 
-      const finalAnswer = buildFinalAnswer(toolSummaries);
+      const finalAnswer = plan.finalAnswerPrompt || buildFinalAnswer(toolSummaries);
       deps.eventbus.publish({
         type: "agent.answer.produced",
         runId,
