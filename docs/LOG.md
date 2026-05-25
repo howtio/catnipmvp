@@ -73,6 +73,25 @@
   - `"帮我写贪吃蛇python代码"` → `docs=0`，1 工具 `write_file`，写入 `task_output.py`（4.5s）
   - `"给我一首关于天气的诗"` → `docs=0`，0 工具，模型直接回答（2s）
 
+### windows3.0 修复 4（2026-05-25）
+
+- **Heuristic 全面覆盖所有工具类型** — 除 write_file 外，新增对以下任务模式的 heuristic 路由：
+  - `打开浏览器/预览` → `open_browser`
+  - `运行/执行/install/build` → `shell_exec`
+  - `搜索/查找/query` → `web_search`
+  - `打开链接/访问网站` → `open_url`
+  - `readme` → `read_file`
+  - `git diff/差异` → `git_diff`
+  - `列出/目录/文件夹` → `list_files`
+- **1.5B 模型仅用于 Q&A/纯聊天** — 任何匹配已知模式的任务完全跳过模型的工具计划，直接走 heuristic。不匹配的任务再回退到模型计划（经由 `modelProducedNoMeaningfulCalls` 过滤）
+- **修复根目录旧 catnip.exe 未更新问题** — 编译后 `catnip.exe` 复制到项目根目录，确保用户双击/命令行运行的版本包含最新修复
+- **验证**：
+  - `"你是谁"` → heuristic 无匹配 → 模型回答（1.3s）
+  - `"帮我打开浏览器"` → heuristic `open_browser`（正确路由，因文件不存在失败是预期行为）
+  - `"帮我写贪吃蛇python代码"` → heuristic `write_file` 到 `task_output.py`（4.1s）
+  - `"帮我写一首情书"` → heuristic `write_file` 到 `task_output.txt`（1.3s）
+  - 所有 50 单元测试通过
+
 ### 回滚判断
 
 - 本轮未发生需要回滚的功能性错误

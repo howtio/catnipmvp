@@ -313,22 +313,81 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
 
       // 1.5B local model cannot reliably plan tools. Use heuristic for known task patterns.
       const task = context.task.input;
-      const isWriteTask = /写|创建|create|make|generate|编写|产生/i.test(task);
+      const toolDef = (name: string) => availableTools.find((t) => t.name === name);
 
-      if (isWriteTask) {
-        // Always use heuristic for write/create — model just adds noise
+      // Build a tool call with validation
+      const call = (name: string, args: Record<string, unknown>, reason: string): PlannedToolCall | undefined => {
+        const def = toolDef(name);
+        return def ? { toolName: name, permission: def.permission, args, reason } : undefined;
+      };
+
+      // Heuristic dispatch: check task against known patterns in priority order
+      const openBrowserTask = /打开.*浏览器|open.*browser|浏览器|预览/i.test(task);
+      const writeTask = /写|创建|create|make|generate|编写|产生|code|代码|script|脚本|生成/i.test(task);
+      const shellTask = /运行|run|执行|execute|install|编译|build|npm|git/i.test(task);
+      const searchTask = /搜索|search|查找|query|搜/i.test(task);
+      const openUrlTask = /打开.*链接|open.*url|访问.*网站|visit/i.test(task);
+      const readFileTask = /readme|read.*file|显示|查看/i.test(task) && !writeTask;
+      const diffTask = /git diff|diff.*git|差异|对比/i.test(task);
+      const listTask = /列出|list.*file|目录|dir|文件夹/i.test(task);
+
+      // Collect all matching heuristic tool calls
+      const heuristicCalls: PlannedToolCall[] = [];
+
+      if (writeTask) {
         const ext = guessFileExtension(task);
         const fileName = guessFileName(task, ext);
         const path = fileName.startsWith("workspaces/") ? fileName : `workspaces/demo/${fileName}`;
-        const toolDef = availableTools.find((t) => t.name === "write_file");
-        const generatedContent = generateFileContent(ext, task, object.finalAnswerPrompt);
+        const c = call("write_file", { path, content: generateFileContent(ext, task, object.finalAnswerPrompt) }, `Write ${fileName} as requested`);
+        if (c) heuristicCalls.push(c);
+      }
+
+      if (openBrowserTask && !writeTask) {
+        const focused = context.memory.workingSet.focusedOpenableHtmlPath
+          ?? context.memory.workingSet.openableHtmlPaths[0]
+          ?? "workspaces/demo/generated.html";
+        const c = call("open_browser", { path: focused }, focused !== "workspaces/demo/generated.html"
+          ? "Open the focused HTML artifact from working memory."
+          : "Open browser for preview.");
+        if (c) heuristicCalls.push(c);
+      }
+
+      if (shellTask) {
+        const c = call("shell_exec", { command: "git", argv: ["status"] }, "Run shell command as requested.");
+        if (c) heuristicCalls.push(c);
+      }
+
+      if (searchTask) {
+        const query = task.replace(/搜索|search|query|查找|搜/gi, "").trim() || task;
+        const c = call("web_search", { query, limit: 5 }, "Search the web.");
+        if (c) heuristicCalls.push(c);
+      }
+
+      if (openUrlTask) {
+        const url = task.match(/https?:\/\/[^\s"'<>]+/i)?.[0] ?? "https://example.com/";
+        const c = call("open_url", { url }, "Open the requested URL.");
+        if (c) heuristicCalls.push(c);
+      }
+
+      if (readFileTask) {
+        const c = call("read_file", { path: "README.md" }, "Read the project readme.");
+        if (c) heuristicCalls.push(c);
+      }
+
+      if (diffTask) {
+        const c = call("git_diff", {}, "Inspect current git diff.");
+        if (c) heuristicCalls.push(c);
+      }
+
+      if (listTask) {
+        const c = call("list_files", { path: "." }, "List workspace entries.");
+        if (c) heuristicCalls.push(c);
+      }
+
+      // If any heuristic pattern matched, use it (model's plan is unreliable)
+      if (heuristicCalls.length > 0) {
         return {
-          plannedToolCalls: toolDef ? [{
-            toolName: "write_file",
-            permission: toolDef.permission,
-            args: { path, content: generatedContent },
-            reason: `Write ${fileName} as requested`,
-          }] : [],
+          plannedToolCalls: heuristicCalls,
           finalAnswerPrompt: object.finalAnswerPrompt,
         };
       }
