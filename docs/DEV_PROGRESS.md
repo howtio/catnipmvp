@@ -149,9 +149,13 @@
 - 仅实现 `plan()` 接口（plan-only），工具执行由 Runner wrapper 顺序调度
   - 小模型不支持 AI SDK tool calling，plan-only 更稳定高效
 - 已测试模型：
-  - `deepseek-r1:1.5b` — 1.1GB，规划准确，首次加载 ~70s，后续 ~7s
-  - `qwen2.5:0.5b` — ~400MB，DeepSeek 0.6B 替代品，规划可用
-  - `qwen2.5:1.5b` — ~900MB，无思考开销，响应更快
+  - `qwen2.5:1.5b` — ~900MB，无思考开销，响应快，聊天和简单问答准确（**默认模型**）
+  - `deepseek-r1:1.5b` — 1.1GB，规划准确，有 thinking 开销首次 ~70s 后续 ~7s
+  - `qwen2.5:0.5b` — ~400MB，最轻量但规划质量有限
+- 修复 `getProjectRoot()` — 编译到 `dist/src/` 时正确退到项目根目录
+- 修复空工具计划 — 模型认为不需要工具时直接输出回答，不再走 fallback
+- 修复本地模型 prompt — 明确要求直接回答用户问题，不解释工具选择
+- 默认模型从 `deepseek-r1:1.5b` 改为 `qwen2.5:1.5b`（聊天体验更好）
 - 更新 `start-catnip.cmd` — 支持 `start-catnip local` 直接启动本地模式
 - 更新 `provider.ts` createRunnerProviderFromEnv — `CATNIP_LOCAL_*` 环境变量触发本地模式
 - Ollama 已通过 winget 安装，作为 Windows 系统服务自动启动

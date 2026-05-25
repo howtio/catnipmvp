@@ -45,6 +45,16 @@
 - 本地 DeepSeek-R1 1.5B 测试通过（plan-only 模式）
 - SEA exe 编译通过（93MB），双击运行进入交互模式
 
+### windows3.0 修复（2026-05-25）
+
+- 修复 `getProjectRoot()` — 编译到 `dist/src/` 时多退一层目录，工具调用不再报 workspaceRoot 越界
+- 修复空工具计划 — 模型认为不需要工具时，Runner 直接输出模型的最终回答，不再走 fallback 到 `list_files`
+- 修复本地模型 prompt — `finalAnswerPrompt` 字段增加描述，提示明确要求模型直接回答用户问题
+- 默认模型从 `deepseek-r1:1.5b` 改为 `qwen2.5:1.5b` — Qwen 无 thinking 开销，聊天/问答响应更好
+- `start-catnip.cmd` 同步默认模型为 `qwen2.5:1.5b`
+- 验证：`"你是谁"` → Qwen 2.5 1.5B 正确回答（4s），DeepSeek-R1 1.5B 正确返回空工具计划
+- `.gitignore` 新增 `workspaces/demo/*` 防止运行时产物被提交
+
 ### 回滚判断
 
 - 本轮未发生需要回滚的功能性错误
