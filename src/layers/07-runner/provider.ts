@@ -4,6 +4,8 @@ import { z } from "zod";
 import { platform } from "node:process";
 import type { MemoryEnrichedRunContext } from "../06.5-memory/index.js";
 import type { PermissionLevel } from "../../shared/types/permission.js";
+import { createLocalRunnerProvider, type LocalRunnerProviderOptions } from "./local-provider.js";
+export type { LocalRunnerProviderOptions };
 import { buildFinalAnswer } from "./planner.js";
 import type { RunnerRunResult, ToolExecutionSummary } from "./planner.js";
 
@@ -878,6 +880,8 @@ export interface RunnerProviderEnv {
   DEEPSEEK_API_KEY?: string;
   DEEPSEEK_BASE_URL?: string;
   CATNIP_RUNNER_PROVIDER?: string;
+  CATNIP_LOCAL_MODEL?: string;
+  CATNIP_LOCAL_HOST?: string;
 }
 
 export function createRunnerProviderFromEnv(env: RunnerProviderEnv = process.env): RunnerProvider {
@@ -896,9 +900,21 @@ export function createRunnerProviderFromEnv(env: RunnerProviderEnv = process.env
       ? { apiKey: env.DEEPSEEK_API_KEY }
       : {}),
   };
+  const localOptions = {
+    ...(typeof env.CATNIP_LOCAL_MODEL === "string" && env.CATNIP_LOCAL_MODEL.length > 0
+      ? { model: env.CATNIP_LOCAL_MODEL }
+      : {}),
+    ...(typeof env.CATNIP_LOCAL_HOST === "string" && env.CATNIP_LOCAL_HOST.length > 0
+      ? { host: env.CATNIP_LOCAL_HOST }
+      : {}),
+  };
 
   if (mode === "heuristic") {
     return createHeuristicRunnerProvider();
+  }
+
+  if (mode === "local") {
+    return createLocalRunnerProvider(localOptions);
   }
 
   if (mode === "deepseek") {
@@ -923,6 +939,11 @@ export function createRunnerProviderFromEnv(env: RunnerProviderEnv = process.env
 
   if (hasDeepSeekKey) {
     return createDeepSeekRunnerProvider(deepSeekOptions);
+  }
+
+  // Auto-detect: if Ollama is running, prefer local model
+  if (process.env.CATNIP_LOCAL_HOST || process.env.CATNIP_LOCAL_MODEL) {
+    return createLocalRunnerProvider(localOptions);
   }
 
   return createHeuristicRunnerProvider();

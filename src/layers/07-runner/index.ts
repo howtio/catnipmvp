@@ -1,4 +1,5 @@
 export { createRunnerLayer } from "./wrapper.js";
+export { createLocalRunnerProvider } from "./local-provider.js";
 export {
   createAiSdkRunnerProvider,
   createDeepSeekRunnerProvider,
@@ -6,6 +7,7 @@ export {
   createRunnerProviderFromEnv,
 } from "./provider.js";
 export { buildFinalAnswer, summarizeToolOutcome } from "./planner.js";
+export type { LocalRunnerProviderOptions } from "./local-provider.js";
 export type {
   AiSdkRunnerProviderOptions,
   AvailableTool,

@@ -130,13 +130,31 @@
 - `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "web search latest catnip agent runtime and open browser search"` 通过
 - `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "open url https://example.com/result"` 通过
 
-### 2026-05-25 进行中
+### 2026-05-25 windows2.0 已完成
 
 - Windows 平台兼容性优化（windows2.0）
   - guard path 分隔符适配
   - shell_exec Windows 内置命令支持
   - 各层 provider/context system prompt 增加 Windows 提示
   - 构建为独立 catnip.exe
+
+### windows3.0: 本地 CPU 小模型支持
+
+- 新增 `src/layers/07-runner/local-provider.ts` — 基于 Ollama 的本地模型 provider
+- 使用 `@ai-sdk/openai` 连接 Ollama（OpenAI 兼容 API）
+- 支持 `CATNIP_RUNNER_PROVIDER=local` 环境变量切换
+- 支持 `CATNIP_LOCAL_MODEL` 指定模型（默认 `deepseek-r1:1.5b`）
+- 支持 `CATNIP_LOCAL_HOST` 自定义 Ollama 地址（默认 `http://localhost:11434`）
+- provider 自动检测 Ollama 运行状态，自动拉取缺失模型
+- 仅实现 `plan()` 接口（plan-only），工具执行由 Runner wrapper 顺序调度
+  - 小模型不支持 AI SDK tool calling，plan-only 更稳定高效
+- 已测试模型：
+  - `deepseek-r1:1.5b` — 1.1GB，规划准确，首次加载 ~70s，后续 ~7s
+  - `qwen2.5:0.5b` — ~400MB，DeepSeek 0.6B 替代品，规划可用
+  - `qwen2.5:1.5b` — ~900MB，无思考开销，响应更快
+- 更新 `start-catnip.cmd` — 支持 `start-catnip local` 直接启动本地模式
+- 更新 `provider.ts` createRunnerProviderFromEnv — `CATNIP_LOCAL_*` 环境变量触发本地模式
+- Ollama 已通过 winget 安装，作为 Windows 系统服务自动启动
 
 ### 未开始
 

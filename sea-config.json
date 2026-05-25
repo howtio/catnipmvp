@@ -1,5 +1,5 @@
 {
-  "main": "dist/catnip-bundle.cjs",
+  "main": "dist/catnip-sea.cjs",
   "output": "dist/sea-prep.blob",
   "disableExperimentalSEAWarning": true
 }

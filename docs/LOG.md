@@ -1,5 +1,68 @@
 # Construction Log
 
+## 2026-05-25 / Windows / windows3.0 本地 CPU 小模型支持
+
+### 版本
+
+- `windows3.0`
+
+### 目标
+
+替换 DeepSeek API 为本地 CPU 小模型（Ollama + deepseek-r1:1.5b / qwen2.5:0.5b），实现完全离线运行。
+
+### 本次修改
+
+- **新增 `src/layers/07-runner/local-provider.ts`**：基于 Ollama 的 OpenAI 兼容 API，通过 `@ai-sdk/openai` 连接
+- **plan-only 模式**：小模型不支持 AI SDK tool calling，仅实现 `plan()`，工具执行由 Runner wrapper 顺序调度
+- **支持 `CATNIP_RUNNER_PROVIDER=local`**：环境变量切换本地模式
+- **支持 `CATNIP_LOCAL_MODEL`**：指定模型（默认 `deepseek-r1:1.5b`）
+- **支持 `CATNIP_LOCAL_HOST`**：自定义 Ollama 地址（默认 `http://localhost:11434`）
+- **provider 自动检测**：Ollama 运行状态检查、缺失模型自动拉取
+- **`provider.ts`**：扩展 `createRunnerProviderFromEnv` 支持 local 模式与自动检测
+- **`start-catnip.cmd`**：支持 `start-catnip local` 直接启动本地模式
+- **`sea-config.json`**：输出从 `catnip-bundle.cjs` 改为 `catnip-sea.cjs`
+- **`.local-secrets/local.env`**：新增本地模式环境变量文件
+- **测试模型**：`deepseek-r1:1.5b`（1.1GB）、`qwen2.5:0.5b`（~400MB）、`qwen2.5:1.5b`（~900MB）
+- **性能数据**：首次加载 ~70s，后续 ~7s（Ollama 模型缓存）
+
+### 修改文件
+
+- src/layers/07-runner/local-provider.ts (新增)
+- src/layers/07-runner/provider.ts
+- src/layers/07-runner/index.ts
+- start-catnip.cmd
+- sea-config.json
+- docs/DEV_PROGRESS.md
+- docs/LOG.md
+- .local-secrets/local.env (新增，gitignored)
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过
+- 本地 Qwen 2.5 0.5B 测试通过（plan-only 模式）
+- 本地 DeepSeek-R1 1.5B 测试通过（plan-only 模式）
+- SEA exe 编译通过（93MB），双击运行进入交互模式
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 如需回滚，可回到 `feat/windows2.0` 分支基线提交
+
+### 风险
+
+- 小模型规划质量低于 DeepSeek API，复杂任务可能计划不合理
+- Ollama 需要单独安装并作为 Windows 系统服务运行
+- deepseek-r1 有 thinking 开销（首次 70s），qwen 系列无此问题
+- SEA exe（93MB）因内嵌完整 Node.js 运行时，体积较大
+
+### 下一步
+
+- GitHub 仓库实际接入与持续集成
+- 更细的失败分类与恢复策略
+- 运行级验收与回滚建议结构化输出
+
 ## 2026-05-25 / Windows / windows2.0 平台兼容性优化与 SEA 独立 exe
 
 ### 版本
