@@ -13,6 +13,7 @@ dist/
 # Logs
 logs/
 
-# SEA executable (regeneratable build artifact)
+# Workspace demo artifacts (regenerated on each run)
+workspaces/demo/*
 catnip.exe
 sea-prep.blob
