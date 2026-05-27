@@ -250,7 +250,7 @@ async function generateContent(
 
 export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = {}): RunnerProvider {
   const host = options.host ?? process.env.CATNIP_LOCAL_HOST ?? OLLAMA_DEFAULT_HOST;
-  const model = options.model ?? process.env.CATNIP_LOCAL_MODEL ?? "qwen2.5:1.5b";
+  const model = options.model ?? process.env.CATNIP_LOCAL_MODEL ?? "gemma3:1b";
   let modelReady = false;
 
   const olp = createOpenAI({
