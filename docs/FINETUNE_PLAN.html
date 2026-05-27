@@ -650,11 +650,18 @@ pre .num { color: var(--accent4); }
     <div class="flow-arrow">→</div>
     <div class="flow-node highlight"><span class="fn-label">合并权重</span><span class="fn-sub">merge LoRA</span></div>
     <div class="flow-arrow">→</div>
-    <div class="flow-node highlight"><span class="fn-label">GGUF 导出</span><span class="fn-sub">llama.cpp</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node highlight"><span class="fn-label">Ollama</span><span class="fn-sub">ollama create</span></div>
+    <div class="flow-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <div class="flow-node" style="border-color:var(--accent3);"><span class="fn-label">GGUF 导出</span><span class="fn-sub">llama.cpp</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node" style="border-color:var(--accent3);"><span class="fn-label">Ollama</span><span class="fn-sub">PC 本地</span></div>
+      <div class="flow-arrow" style="color:var(--text2);font-size:12px;">或</div>
+      <div class="flow-node" style="border-color:var(--accent4);"><span class="fn-label">RKNN 转换</span><span class="fn-sub">rk3588 NPU</span></div>
+    </div>
     <div class="flow-arrow">→</div>
     <div class="flow-node highlight"><span class="fn-label">Catnip</span><span class="fn-sub">CATNIP_LOCAL_MODEL</span></div>
+  </div>
+  <div style="margin-top:8px;font-size:12px;color:var(--text2);">
+    PC 部署走 Ollama（GGUF），边缘设备走 Rockchip NPU（RKNN）→ 封装 HTTP 服务 → CATNIP_LOCAL_HOST
   </div>
 </div>
 

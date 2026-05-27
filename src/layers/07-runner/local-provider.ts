@@ -327,7 +327,7 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
       ].join("\n\n");
 
       if (process.env.CATNIP_CLI_DEBUG === "1") {
-        console.log("\n=== PROMPT TO MODEL ===\n" + prompt.slice(0, 3000) + "\n=======================\n");
+        console.log("\n=== PROMPT TO MODEL ===\n" + prompt + "\n=======================\n");
       }
 
       const { object } = await generateObject({

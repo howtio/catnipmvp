@@ -203,6 +203,27 @@ set CATNIP_RUNNER_PROVIDER=local
 catnip.exe
 ```
 
+### 4.5 (可选) 部署到 Rockchip NPU
+
+适用于 RK3588/RK3576 等边缘设备，需要 rknn-llm ≥ v1.2.0。
+
+```python
+# 合并权重后，直接在 Rockchip 开发板上转换
+# rknn-llm v1.2.0+ 已支持 Gemma3ForCausalLM
+rkllm convert --model_path gemma3-catnip-merged \
+             --output ./gemma3-catnip-rknn \
+             --target_platform rk3588 \
+             --eval_mode w8a8
+```
+
+```bash
+# 推理测试
+./rkllm_client --model ./gemma3-catnip-rknn/gemma3-catnip-it_W8A8_RK \
+               --prompt "你是谁"
+```
+
+集成方式：将 rknn-llm 封装为本地 HTTP 服务（C API / Python API），catnip 通过 `CATNIP_LOCAL_HOST` 指向该服务即可。
+
 ---
 
 ## 5. 评估方法

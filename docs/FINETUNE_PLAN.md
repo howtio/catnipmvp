@@ -180,6 +180,8 @@ DeepSeek V4 Pro 计算明细：
 
 ## Phase 4: 部署
 
+### 4A. Ollama (PC 本地运行)
+
 ```
 训练完成
     │
@@ -203,6 +205,46 @@ catnip.exe
     ▼
 运行完整端到端测试
 ```
+
+### 4B. Rockchip NPU (RK3588 等边缘设备)
+
+> 适用于需要本地离线运行且不想依赖 PC 的场景。需 Rockchip 开发板（如 RK3588、RK3576）和 rknn-llm v1.2.0+ 工具链。
+
+```
+训练完成
+    │
+    ▼
+合并 LoRA 权重
+    │
+    ▼
+导出 HuggingFace 格式 (保存完整模型)
+model.save_pretrained("gemma3-catnip-merged")
+tokenizer.save_pretrained("gemma3-catnip-merged")
+    │
+    ▼
+在 Rockchip 开发板上转换
+rkllm convert --model_path gemma3-catnip-merged \
+             --output ./gemma3-catnip-rknn \
+             --target_platform rk3588 \
+             --eval_mode w8a8
+    │
+    ▼
+量化模型推理
+./rkllm_client --model ./gemma3-catnip-rknn/gemma3-catnip-it_W8A8_RK \
+               --prompt "你是谁"
+    │
+    ▼
+集成到 catnip (需适配 HTTP API 或 SDK)
+rknn-llm 提供 C API / Python API，可封装为本地 HTTP 服务
+→ catnip 通过 CATNIP_LOCAL_HOST 指向该服务
+```
+
+**RKNN 部署注意事项：**
+- 确认 rknn-llm 版本 ≥ v1.2.0（v1.1.4 不支持 Gemma 3）
+- Gemma 3 1B 转换已验证通过（341层，~4秒转换）
+- 4b/12b 架构相同也可转换
+- 如输出乱码，检查 chat template 配置
+- W8A8 量化后模型体积约减少 50-60%
 
 ---
 
