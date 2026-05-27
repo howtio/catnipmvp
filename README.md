@@ -18,19 +18,31 @@ ollama --version
 
 ### 2. 下载模型
 
-推荐模型（按资源需求排序）：
+当前默认模型：`gemma3:1b`（速度最快，~815MB）
 
-| 模型 | 大小 | 特点 |
-|------|------|------|
-| `qwen2.5:1.5b` | ~900MB | 默认模型，响应快，聊天体验好 |
-| `qwen3:1.7b` | ~1.1GB | 比 1.5B 略强 |
-| `deepseek-r1:1.5b` | ~1.1GB | 规划准确，但有 thinking 首包延迟 |
-| `qwen2.5:0.5b` | ~400MB | 最轻量，适合低配机器 |
+所有模型均为 Ollama 格式（GGUF Q4_K_M 量化），**纯 CPU 可运行**，无需 GPU。
 
-下载模型（以默认模型为例）：
+| 模型 | 参数 | 磁盘大小 | 最低内存 | 特点 |
+|------|------|----------|----------|------|
+| `qwen2.5:0.5b` | 0.5B | ~400 MB | 1 GB | 最轻量，适合 1GB 内存旧机器 |
+| `gemma3:1b` | 1B | ~815 MB | 2 GB | **当前默认**，Gemma 3 架构，推理最快 (~2s) |
+| `qwen2.5:1.5b` | 1.5B | ~900 MB | 2 GB | 中文能力强，原默认模型 |
+| `deepseek-r1:1.5b` | 1.5B | ~1.1 GB | 2 GB | 推理/规划能力强，但有首包延迟 |
+| `qwen3:1.7b` | 1.7B | ~1.1 GB | 2 GB | Qwen 3 最新架构，比 1.5B 略强 |
+| `gemma2:2b` | 2B | ~1.6 GB | 3 GB | Google Gemma 2，指令跟随好 |
+| `qwen2.5:3b` | 3B | ~1.9 GB | 3 GB | Qwen 2.5，3B 性价比高 |
+| `gemma3:4b` | 4B | ~3.2 GB | 4 GB | Gemma 3 4B，工具调用明显强于 1B |
+| `qwen3:4b` | 4B | ~2.5 GB | 4 GB | Qwen 3 4B，中文优秀 |
+| `deepseek-r1:7b` | 7B | ~4.7 GB | 6 GB | 强推理，有 thinking 过程 |
+| `qwen2.5:7b` | 7B | ~4.7 GB | 6 GB | Qwen 2.5 7B 稳定可靠 |
+| `qwen3:8b` | 8B | ~5.2 GB | 8 GB | Qwen 3 8B，中文最强本地选项之一 |
+| `gemma2:9b` | 9B | ~5.5 GB | 8 GB | Gemma 2 9B，英文能力强 |
+| `gemma3:12b` | 12B | ~8.5 GB | 10 GB | **最强本地选项**，工具调用最准确，需足够内存 |
+
+下载模型：
 
 ```powershell
-ollama pull qwen2.5:1.5b
+ollama pull gemma3:1b
 ```
 
 ### 3. 配置环境变量
@@ -39,7 +51,7 @@ ollama pull qwen2.5:1.5b
 
 ```ini
 CATNIP_RUNNER_PROVIDER=local
-CATNIP_LOCAL_MODEL=qwen2.5:1.5b
+CATNIP_LOCAL_MODEL=gemma3:1b
 CATNIP_LOCAL_HOST=http://localhost:11434
 ```
 
@@ -48,7 +60,7 @@ CATNIP_LOCAL_HOST=http://localhost:11434
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `CATNIP_RUNNER_PROVIDER` | `auto` | 设为 `local` 强制本地模式 |
-| `CATNIP_LOCAL_MODEL` | `qwen2.5:1.5b` | Ollama 模型名 |
+| `CATNIP_LOCAL_MODEL` | `gemma3:1b` | Ollama 模型名 |
 | `CATNIP_LOCAL_HOST` | `http://localhost:11434` | Ollama 服务地址 |
 | `CATNIP_MEMORY_MAX_ENTRIES` | `3` | 记忆条目数（32K 上下文建议 3） |
 | `CATNIP_RUNNER_MAX_STEPS` | `10` | 最大工具调用步数 |
