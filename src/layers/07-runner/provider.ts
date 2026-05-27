@@ -21,7 +21,7 @@ export interface AvailableTool {
 }
 
 export interface PlannedToolCall {
-  toolName: string;
+  name: string;
   args: Record<string, unknown>;
   permission: PermissionLevel;
   reason: string;
@@ -46,13 +46,13 @@ export interface RunnerProvider {
 }
 
 function buildPlannedToolCall(
-  toolName: string,
+  name: string,
   permission: PermissionLevel,
   args: Record<string, unknown>,
   reason: string,
 ): PlannedToolCall {
   return {
-    toolName,
+    name,
     permission,
     args,
     reason,
@@ -255,23 +255,23 @@ function normalizePlannedToolArgs(toolName: string, args: Record<string, unknown
 }
 
 function normalizePlannedCalls(
-  rawCalls: Array<{ toolName: string; args: Record<string, unknown>; reason: string }>,
+  rawCalls: Array<{ name: string; args: Record<string, unknown> }>,
   availableTools: AvailableTool[],
 ): PlannedToolCall[] {
   const toolMap = new Map(availableTools.map((tool) => [tool.name, tool]));
 
   return rawCalls
     .map((call) => {
-      const matchedTool = toolMap.get(call.toolName);
+      const matchedTool = toolMap.get(call.name);
       if (!matchedTool) {
         return undefined;
       }
 
       return {
-        toolName: matchedTool.name,
+        name: matchedTool.name,
         permission: matchedTool.permission,
-        args: normalizePlannedToolArgs(call.toolName, call.args),
-        reason: call.reason,
+        args: normalizePlannedToolArgs(call.name, call.args),
+        reason: "Model-selected tool call.",
       } satisfies PlannedToolCall;
     })
     .filter((call): call is PlannedToolCall => call !== undefined);
@@ -469,9 +469,8 @@ export function createHeuristicRunnerProvider(): RunnerProvider {
 const aiSdkPlanSchema = z.object({
   plannedToolCalls: z.array(
     z.object({
-      toolName: z.string(),
+      name: z.string(),
       args: z.record(z.string(), z.unknown()),
-      reason: z.string(),
     }),
   ),
   finalAnswerPrompt: z.string(),
@@ -623,7 +622,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
                 throw new Error("Tool registry is missing list_files.");
               }
               const summary = await helpers.executeToolCall({
-                toolName: "list_files",
+                name: "list_files",
                 permission: availableTool.permission,
                 args: normalizePlannedToolArgs("list_files", input),
                 reason: "Model-selected tool call.",
@@ -646,7 +645,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
                 throw new Error("Tool registry is missing read_file.");
               }
               const summary = await helpers.executeToolCall({
-                toolName: "read_file",
+                name: "read_file",
                 permission: availableTool.permission,
                 args: normalizePlannedToolArgs("read_file", input),
                 reason: "Model-selected tool call.",
@@ -670,7 +669,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
                 throw new Error("Tool registry is missing write_file.");
               }
               const summary = await helpers.executeToolCall({
-                toolName: "write_file",
+                name: "write_file",
                 permission: availableTool.permission,
                 args: normalizePlannedToolArgs("write_file", input),
                 reason: "Model-selected tool call.",
@@ -695,7 +694,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
                 throw new Error("Tool registry is missing patch_file.");
               }
               const summary = await helpers.executeToolCall({
-                toolName: "patch_file",
+                name: "patch_file",
                 permission: availableTool.permission,
                 args: normalizePlannedToolArgs("patch_file", input),
                 reason: "Model-selected tool call.",
@@ -719,7 +718,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
                 throw new Error("Tool registry is missing shell_exec.");
               }
               const summary = await helpers.executeToolCall({
-                toolName: "shell_exec",
+                name: "shell_exec",
                 permission: availableTool.permission,
                 args: normalizePlannedToolArgs("shell_exec", input),
                 reason: "Model-selected tool call.",
@@ -740,7 +739,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
                 throw new Error("Tool registry is missing git_diff.");
               }
               const summary = await helpers.executeToolCall({
-                toolName: "git_diff",
+                name: "git_diff",
                 permission: availableTool.permission,
                 args: {},
                 reason: "Model-selected tool call.",
@@ -763,7 +762,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
                 throw new Error("Tool registry is missing open_browser.");
               }
               const summary = await helpers.executeToolCall({
-                toolName: "open_browser",
+                name: "open_browser",
                 permission: availableTool.permission,
                 args: normalizePlannedToolArgs("open_browser", input),
                 reason: "Model-selected tool call.",
@@ -787,7 +786,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
                 throw new Error("Tool registry is missing web_search.");
               }
               const summary = await helpers.executeToolCall({
-                toolName: "web_search",
+                name: "web_search",
                 permission: availableTool.permission,
                 args: normalizePlannedToolArgs("web_search", input),
                 reason: "Model-selected tool call.",
@@ -810,7 +809,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
                 throw new Error("Tool registry is missing open_browser_search.");
               }
               const summary = await helpers.executeToolCall({
-                toolName: "open_browser_search",
+                name: "open_browser_search",
                 permission: availableTool.permission,
                 args: normalizePlannedToolArgs("open_browser_search", input),
                 reason: "Model-selected tool call.",
@@ -833,7 +832,7 @@ export function createDeepSeekRunnerProvider(options: DeepSeekRunnerProviderOpti
                 throw new Error("Tool registry is missing open_url.");
               }
               const summary = await helpers.executeToolCall({
-                toolName: "open_url",
+                name: "open_url",
                 permission: availableTool.permission,
                 args: normalizePlannedToolArgs("open_url", input),
                 reason: "Model-selected tool call.",

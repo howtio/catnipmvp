@@ -32,7 +32,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
       };
 
       const executeToolCall = async (plannedCall: {
-        toolName: string;
+        name: string;
         permission: PermissionLevel;
         args: Record<string, unknown>;
         reason: string;
@@ -45,7 +45,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
             type: "agent.reasoning.summary",
             runId,
             stepNumber: stepCount + 1,
-            summary: `${plannedCall.reason} Tool: ${plannedCall.toolName}. Attempt ${attempt + 1}.`,
+            summary: `${plannedCall.reason} Tool: ${plannedCall.name}. Attempt ${attempt + 1}.`,
           });
           const toolCallId = createId("toolcall");
           const toolResultPromise = deps.eventbus.waitForToolResult(runId, toolCallId);
@@ -53,7 +53,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
             type: "tool.call.requested",
             runId,
             toolCallId,
-            toolName: plannedCall.toolName,
+            toolName: plannedCall.name,
             args: plannedCall.args,
             workspaceRoot: context.workspace.root,
             permission: plannedCall.permission,
@@ -69,7 +69,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
             usage: {
               mode: "tool-skeleton",
               contextKeys: Object.keys(context),
-              toolName: plannedCall.toolName,
+              toolName: plannedCall.name,
               toolOk: toolResult.ok,
               reason: plannedCall.reason,
               attempt: attempt + 1,
@@ -87,7 +87,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
               type: "agent.reasoning.summary",
               runId,
               stepNumber: stepCount,
-              summary: `Tool ${plannedCall.toolName} failed and will be retried. ${toolResult.error}`,
+              summary: `Tool ${plannedCall.name} failed and will be retried. ${toolResult.error}`,
             });
             continue;
           }
@@ -100,7 +100,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
             type: "agent.reasoning.summary",
             runId,
             stepNumber: stepCount,
-            summary: `Tool ${plannedCall.toolName} failed and the run will continue. ${toolResult.error}`,
+            summary: `Tool ${plannedCall.name} failed and the run will continue. ${toolResult.error}`,
           });
           return toolSummary;
         }
@@ -147,7 +147,7 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
         runId,
         mode: "planned-tool-calls",
         plannedToolCalls: plan.plannedToolCalls.map((plannedCall) => ({
-          toolName: plannedCall.toolName,
+          toolName: plannedCall.name,
           reason: plannedCall.reason,
           args: plannedCall.args,
         })),
@@ -183,9 +183,9 @@ export function createRunnerLayer(deps: RunnerLayerDeps): RunnerLayerApi {
 
       for (const plannedCall of plan.plannedToolCalls) {
         ensureStepBudget();
-        const selectedTool = availableTools.find((tool) => tool.name === plannedCall.toolName);
+        const selectedTool = availableTools.find((tool) => tool.name === plannedCall.name);
         if (!selectedTool) {
-          throw new Error(`Runner selected an unknown tool: ${plannedCall.toolName}`);
+          throw new Error(`Runner selected an unknown tool: ${plannedCall.name}`);
         }
         void selectedTool;
         await executeToolCall(plannedCall);

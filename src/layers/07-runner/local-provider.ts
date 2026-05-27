@@ -100,23 +100,23 @@ function normalizePlannedToolArgs(toolName: string, args: Record<string, unknown
 }
 
 function normalizePlannedCalls(
-  rawCalls: Array<{ toolName: string; args: Record<string, unknown>; reason: string }>,
+  rawCalls: Array<{ name: string; args: Record<string, unknown> }>,
   availableTools: AvailableTool[],
 ): PlannedToolCall[] {
   const toolMap = new Map(availableTools.map((tool) => [tool.name, tool]));
 
   return rawCalls
     .map((call) => {
-      const matchedTool = toolMap.get(call.toolName);
+      const matchedTool = toolMap.get(call.name);
       if (!matchedTool) {
         return undefined;
       }
 
       return {
-        toolName: matchedTool.name,
+        name: matchedTool.name,
         permission: matchedTool.permission,
-        args: normalizePlannedToolArgs(call.toolName, call.args),
-        reason: call.reason,
+        args: normalizePlannedToolArgs(call.name, call.args),
+        reason: "Model-selected tool call.",
       } satisfies PlannedToolCall;
     })
     .filter((call): call is PlannedToolCall => call !== undefined);
@@ -126,7 +126,7 @@ function normalizePlannedCalls(
 function modelProducedNoMeaningfulCalls(plannedCalls: PlannedToolCall[]): boolean {
   if (plannedCalls.length === 0) return true;
   return plannedCalls.every((call) => {
-    const defaultArgs = normalizePlannedToolArgs(call.toolName, {});
+    const defaultArgs = normalizePlannedToolArgs(call.name, {});
     return JSON.stringify(call.args) === JSON.stringify(defaultArgs);
   });
 }
@@ -148,9 +148,8 @@ function buildWorkingMemoryPrompt(context: MemoryEnrichedRunContext): string {
 const aiSdkPlanSchema = z.object({
   plannedToolCalls: z.array(
     z.object({
-      toolName: z.string(),
+      name: z.string(),
       args: z.record(z.string(), z.unknown()),
-      reason: z.string(),
     }),
   ),
   finalAnswerPrompt: z.string().describe("The final answer to the user's task. If no tools were needed, answer the question directly here. This is what the user will see as the result."),
@@ -359,7 +358,7 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
       // Build a tool call with validation
       const call = (name: string, args: Record<string, unknown>, reason: string): PlannedToolCall | undefined => {
         const def = toolDef(name);
-        return def ? { toolName: name, permission: def.permission, args, reason } : undefined;
+        return def ? { name, permission: def.permission, args, reason } : undefined;
       };
 
       // Detect browser intent: "打开" / "预览" / "preview" (also catches standalone "打开" at end like "写html然后打开")

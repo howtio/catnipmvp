@@ -56,7 +56,7 @@ test("heuristic runner provider plans multiple tool calls for combined task", as
   ]);
 
   assert.deepEqual(
-    plan.plannedToolCalls.map((step) => step.toolName),
+    plan.plannedToolCalls.map((step) => step.name),
     ["write_file", "patch_file", "shell_exec"],
   );
 });
@@ -69,7 +69,7 @@ test("heuristic runner provider can plan write html then open browser", async ()
   ]);
 
   assert.deepEqual(
-    plan.plannedToolCalls.map((step) => step.toolName),
+    plan.plannedToolCalls.map((step) => step.name),
     ["write_file", "open_browser"],
   );
   assert.equal(plan.plannedToolCalls[0]?.args.path, "workspaces/demo/generated.html");
@@ -84,7 +84,7 @@ test("heuristic runner provider can plan web search and browser search", async (
   ]);
 
   assert.deepEqual(
-    plan.plannedToolCalls.map((step) => step.toolName),
+    plan.plannedToolCalls.map((step) => step.name),
     ["web_search", "open_browser_search"],
   );
   assert.equal(plan.plannedToolCalls[0]?.args.query, "latest catnip agent and");
@@ -97,7 +97,7 @@ test("heuristic runner provider can plan opening a url", async () => {
     { name: "open_url", description: "Open url", permission: "medium" },
   ]);
 
-  assert.equal(plan.plannedToolCalls[0]?.toolName, "open_url");
+  assert.equal(plan.plannedToolCalls[0]?.name, "open_url");
   assert.equal(plan.plannedToolCalls[0]?.args.url, "https://example.com");
 });
 
@@ -115,7 +115,7 @@ test("heuristic runner provider opens focused html artifact from memory", async 
   ]);
 
   assert.deepEqual(
-    plan.plannedToolCalls.map((step) => step.toolName),
+    plan.plannedToolCalls.map((step) => step.name),
     ["open_browser"],
   );
   assert.equal(plan.plannedToolCalls[0]?.args.path, "workspaces/demo/jump_game.html");
@@ -135,7 +135,7 @@ test("heuristic runner provider reads focused artifact for referential bug fix t
   ]);
 
   assert.deepEqual(
-    plan.plannedToolCalls.map((step) => step.toolName),
+    plan.plannedToolCalls.map((step) => step.name),
     ["read_file"],
   );
   assert.equal(plan.plannedToolCalls[0]?.args.path, "workspaces/demo/jump_game.html");
@@ -144,7 +144,7 @@ test("heuristic runner provider reads focused artifact for referential bug fix t
 test("summarizeToolOutcome and buildFinalAnswer produce readable output", () => {
   const summary = summarizeToolOutcome(
     {
-      toolName: "list_files",
+      name: "list_files",
       permission: "low",
       args: { path: "." },
       reason: "Inspect workspace.",
@@ -172,7 +172,7 @@ test("createRunnerProviderFromEnv falls back to heuristic in auto mode without k
     [{ name: "list_files", description: "List files", permission: "low" }],
   );
 
-  assert.equal(plan.plannedToolCalls[0]?.toolName, "list_files");
+  assert.equal(plan.plannedToolCalls[0]?.name, "list_files");
 });
 
 test("createRunnerProviderFromEnv accepts deepseek mode when key exists", () => {
@@ -262,13 +262,13 @@ test("runner can continue after tool failure when configured", async () => {
         return {
           plannedToolCalls: [
             {
-              toolName: "write_file",
+              name: "write_file",
               permission: "medium",
               args: { path: "a.txt", content: "a" },
               reason: "first",
             },
             {
-              toolName: "patch_file",
+              name: "patch_file",
               permission: "medium",
               args: { path: "a.txt", search: "a", replace: "b" },
               reason: "second",

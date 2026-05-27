@@ -33,7 +33,7 @@ export function summarizeToolOutcome(
 ): ToolExecutionSummary {
   if (outcome.ok) {
     return {
-      toolName: plannedCall.toolName,
+      toolName: plannedCall.name,
       ok: true,
       reason: plannedCall.reason,
       result: unwrapExecutorResult(outcome.result),
@@ -41,7 +41,7 @@ export function summarizeToolOutcome(
   }
 
   return {
-    toolName: plannedCall.toolName,
+    toolName: plannedCall.name,
     ok: false,
     reason: plannedCall.reason,
     error: outcome.error,
