@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Catnip 1.5B 微调方案 — 架构·原理·执行计划</title>
+<title>Catnip 1.5B 微调方案 — 架构·Runner原理·执行计划</title>
 <style>
 :root {
   --bg: #0f0f1a;
@@ -93,14 +93,6 @@ header p { color: var(--text2); margin-top: 8px; font-size: 0.95rem; }
   border-color: var(--accent3); background: rgba(255,107,157,0.1);
 }
 
-/* ─── Data Flow ─── */
-.dataflow { margin: 16px 0; }
-.df-row { display: flex; align-items: flex-start; margin: 6px 0; padding: 4px 0; }
-.df-label { width: 90px; flex-shrink: 0; font-weight: 600; font-size: 0.82rem; color: var(--accent2); }
-.df-arrow { width: 30px; text-align: center; color: var(--text2); }
-.df-content { flex: 1; font-size: 0.85rem; color: var(--text); font-family: 'Consolas', 'Courier New', monospace; font-size: 0.8rem; }
-.df-content .highlight { color: var(--accent3); }
-
 /* ─── Comparison Table ─── */
 table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 12px 0; }
 th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -146,10 +138,6 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   color: var(--accent4); background: rgba(255,217,61,0.1);
   padding: 1px 10px; border-radius: 10px; }
 
-/* ─── LoRA Detail ─── */
-.lora-viz { margin: 16px 0; }
-.lora-viz svg text { font-family: var(--font); }
-
 /* ─── Code ─── */
 code {
   background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px;
@@ -177,6 +165,82 @@ pre .num { color: var(--accent4); }
 .section-label.ft { background: rgba(255,107,157,0.15); color: var(--accent3); }
 .section-label.data { background: rgba(107,203,119,0.15); color: var(--green); }
 .section-label.deploy { background: rgba(255,217,61,0.15); color: var(--accent4); }
+
+/* ─── Runner Internal Diagram ─── */
+.runner-diagram { display: flex; flex-direction: column; gap: 4px; margin: 16px 0; }
+.rd-step {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 10px 14px; border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.rd-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.7rem; flex-shrink: 0; margin-top: 1px;
+}
+.rd-content { flex: 1; }
+.rd-title { font-weight: 600; font-size: 0.88rem; }
+.rd-desc { color: var(--text2); font-size: 0.82rem; margin-top: 3px; }
+.rd-code { font-family: 'Consolas', 'Courier New', monospace; font-size: 0.78rem;
+  color: var(--accent2); margin-top: 4px;
+  background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px;
+  display: inline-block; }
+
+/* ─── Multi-column ─── */
+.cols-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 12px 0; }
+@media (max-width: 800px) { .cols-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 500px) { .cols-3 { grid-template-columns: 1fr; } }
+
+/* ─── Simulator ─── */
+.sim-container {
+  background: rgba(0,0,0,0.25); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; margin: 16px 0;
+}
+.sim-header {
+  background: rgba(124,92,252,0.1); padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.sim-header h4 { margin: 0; color: var(--accent); font-size: 0.9rem; }
+.sim-controls { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.sim-btn {
+  padding: 5px 16px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--card); color: var(--text); cursor: pointer;
+  font-size: 0.78rem; font-family: var(--font); transition: all 0.15s;
+}
+.sim-btn:hover { background: rgba(124,92,252,0.15); border-color: var(--accent); }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sim-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.sim-btn.primary:hover { background: #6a4de6; }
+.sim-btn.primary:disabled { opacity: 0.4; }
+
+.sim-output { padding: 14px 16px; min-height: 260px; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.8rem; line-height: 1.7; }
+.sim-line { opacity: 0; animation: simFadeIn 0.3s forwards; margin: 0; }
+@keyframes simFadeIn { to { opacity: 1; } }
+.sim-line .ts { color: var(--text2); font-size: 0.7rem; }
+.sim-line .tag-sys { color: var(--accent); font-weight: 600; }
+.sim-line .tag-plan { color: var(--accent3); font-weight: 600; }
+.sim-line .tag-act { color: var(--green); font-weight: 600; }
+.sim-line .tag-done { color: var(--accent4); font-weight: 600; }
+.sim-line .tag-ans { color: var(--accent2); font-weight: 600; }
+.sim-line .highlight-json { color: var(--accent4); }
+.sim-cursor {
+  display: inline-block; width: 8px; height: 16px;
+  background: var(--accent2); animation: blink 1s step-end infinite;
+  vertical-align: text-bottom; margin-left: 2px;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ─── Provider Comparison ─── */
+.provider-box {
+  background: rgba(0,0,0,0.15); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px; margin: 8px 0;
+}
+.provider-box .pb-title { font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; }
+.provider-box .pb-row { display: flex; gap: 6px; margin: 3px 0; font-size: 0.8rem; }
+.provider-box .pb-key { color: var(--accent2); width: 90px; flex-shrink: 0; }
+.provider-box .pb-val { color: var(--text); }
 </style>
 </head>
 <body>
@@ -264,11 +328,157 @@ pre .num { color: var(--accent4); }
   </div>
 </div>
 
-<!-- ═══ 2. 微调原理 ═══ -->
+<!-- ═══ 2. Runner 原理 ═══ -->
 <div class="card">
-  <h2><span class="icon">🧠</span> 二、微调原理</h2>
+  <h2><span class="icon">🎯</span> 二、Runner 层原理（微调核心）</h2>
+  <p>Runner 层是 catnip 中 <strong>最核心的层</strong>，负责将用户输入转化为工具调用计划并执行。微调直接作用于这一层的模型推理。</p>
 
-  <h3>2.1 为什么要微调而非换模型？</h3>
+  <h3>2.1 Runner 层内部结构</h3>
+  <p>Runner 层由 4 个文件协同工作：</p>
+  <div style="margin:12px 0;">
+    <table>
+      <tr><th>文件</th><th>角色</th><th>微调影响</th></tr>
+      <tr>
+        <td><code>provider.ts</code></td>
+        <td>定义 <code>PlannedToolCall</code> 接口、schema、<code>normalizePlannedCalls</code> 规范化、3 个 provider 工厂（Heuristic / AiSdk / DeepSeek）</td>
+        <td>schema 定义了模型的输出格式（微调目标的输出空间）</td>
+      </tr>
+      <tr>
+        <td><code>local-provider.ts</code></td>
+        <td><strong>🎯 微调直接作用文件</strong> — 1.5B 模型的 <code>generateObject</code> 调用 + heuristic 规则覆盖</td>
+        <td>模型的 tool plan 在此生成，heuristic 在此覆盖</td>
+      </tr>
+      <tr>
+        <td><code>wrapper.ts</code></td>
+        <td><code>createRunnerLayer</code> — 编排执行流程：plan → executeToolCall 循环 → 结果</td>
+        <td>微调后仍然通过这里执行，无需改动</td>
+      </tr>
+      <tr>
+        <td><code>planner.ts</code></td>
+        <td><code>summarizeToolOutcome</code>、<code>buildFinalAnswer</code> 工具结果汇总</td>
+        <td>微调后保持不动</td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>2.2 两种执行路径</h3>
+  <div class="cols-3">
+    <div class="provider-box">
+      <div class="pb-title" style="color:var(--accent3);">路径 A: plan()</div>
+      <div class="pb-row"><span class="pb-key">谁在用</span><span class="pb-val">HeuristicProvider, LocalProvider, AiSdkProvider</span></div>
+      <div class="pb-row"><span class="pb-key">流程</span><span class="pb-val">模型一次性生成全部 tool plan → wrapper 逐工具执行</span></div>
+      <div class="pb-row"><span class="pb-key">1.5B</span><span class="pb-val">✅ 当前路径（微调作用于此路径）</span></div>
+    </div>
+    <div class="provider-box">
+      <div class="pb-title" style="color:var(--green);">路径 B: runWithTools()</div>
+      <div class="pb-row"><span class="pb-key">谁在用</span><span class="pb-val">DeepSeekProvider</span></div>
+      <div class="pb-row"><span class="pb-key">流程</span><span class="pb-val">AI SDK 内置 tool calling 循环，模型自主决定调哪个工具</span></div>
+      <div class="pb-row"><span class="pb-key">1.5B</span><span class="pb-val">❌ 1.5B 不支持（能力不够）</span></div>
+    </div>
+    <div class="provider-box">
+      <div class="pb-title" style="color:var(--accent4);">路径 C: Heuristic</div>
+      <div class="pb-row"><span class="pb-key">谁在用</span><span class="pb-val">HeuristicProvider（无模型时兜底）</span></div>
+      <div class="pb-row"><span class="pb-key">流程</span><span class="pb-val">纯关键词匹配，没有模型调用</span></div>
+      <div class="pb-row"><span class="pb-key">1.5B</span><span class="pb-val">⚠️ 微调后退化时 fallback</span></div>
+    </div>
+  </div>
+
+  <h3>2.3 1.5B 模型在 Runner 中的完整工作流</h3>
+  <div class="runner-diagram">
+    <div class="rd-step" style="border-left:3px solid var(--accent2);">
+      <div class="rd-num" style="background:rgba(79,195,247,0.2);color:var(--accent2);">1</div>
+      <div class="rd-content">
+        <div class="rd-title">构建 Prompt</div>
+        <div class="rd-desc">将 system prompt、platform hint、tool list、working memory、用户输入拼接成完整 prompt</div>
+        <div class="rd-code">prompt = [SYSTEM, TOOL_LIST, WORKING_MEMORY, "Task: 用户输入"]</div>
+      </div>
+    </div>
+    <div class="rd-step" style="border-left:3px solid var(--accent);">
+      <div class="rd-num" style="background:rgba(124,92,252,0.2);color:var(--accent);">2</div>
+      <div class="rd-content">
+        <div class="rd-title">模型推理 — 这是微调发生的地方</div>
+        <div class="rd-desc"><code>generateObject({ model: qwen2.5:1.5b, schema: aiSdkPlanSchema, prompt })</code> — 模型根据 prompt 和 schema 约束输出结构化 JSON</div>
+        <div class="rd-code">输出: { plannedToolCalls: [{ name, args }], finalAnswerPrompt }</div>
+      </div>
+    </div>
+    <div class="rd-step" style="border-left:3px solid var(--accent3);">
+      <div class="rd-num" style="background:rgba(255,107,157,0.2);color:var(--accent3);">3</div>
+      <div class="rd-content">
+        <div class="rd-title">Heuristic 覆盖（local-provider 特有）</div>
+        <div class="rd-desc">检查用户输入是否匹配关键词。匹配则<strong>丢弃模型输出</strong>，用 heuristic 规则替换。这是 1.5B 模型的兜底策略。</div>
+        <div class="rd-code">if (/写|创建|generate/.test(task)) → bypass model, use heuristic write_file</div>
+      </div>
+    </div>
+    <div class="rd-step" style="border-left:3px solid var(--green);">
+      <div class="rd-num" style="background:rgba(107,203,119,0.2);color:var(--green);">4</div>
+      <div class="rd-content">
+        <div class="rd-title">规范化 + 执行</div>
+        <div class="rd-desc"><code>normalizePlannedCalls</code> 过滤未知工具、补全默认参数 → <code>wrapper.ts</code> 逐工具调用 <code>executeToolCall</code></div>
+        <div class="rd-code">for (const call of plannedCalls) { await execToolCall(call) }</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>2.4 Heuristic 与模型的关系</h3>
+  <div style="margin:12px 0;">
+    <pre>
+<span class="cm">// local-provider.ts: plan() 中的关键路径</span>
+
+<span class="kw">const</span> { object } = <span class="kw">await</span> generateObject({ model: llm, schema: aiSdkPlanSchema, prompt })
+<span class="kw">const</span> plannedToolCalls = normalizePlannedCalls(object.plannedToolCalls, availableTools)
+
+<span class="cm">// ▼▼▼ Heuristic 覆盖：如果匹配关键词，丢弃模型输出 ▼▼▼</span>
+<span class="kw">const</span> writeTask = /写|创建|create|make|generate|code/.test(task)
+<span class="kw">const</span> hasOpenIntent = /打开|预览|preview/i.test(task)
+
+<span class="kw">if</span> (writeTask) {
+  content = <span class="kw">await</span> generateContent(llm, task, ext)  <span class="cm">// Route A: 模型生成真实内容</span>
+  heuristicCalls.push({ name: <span class="str">"write_file"</span>, args: { path, content } })
+}
+<span class="cm">// ... 更多 heuristic 规则 ...</span>
+
+<span class="kw">if</span> (heuristicCalls.length &gt; 0) {
+  <span class="kw">return</span> { plannedToolCalls: heuristicCalls }  <span class="cm">// ← 模型输出被完全覆盖</span>
+}
+
+<span class="cm">// ▼▼▼ heuristic 没命中 → 使用模型输出 ▼▼▼</span>
+<span class="kw">if</span> (modelProducedNoMeaningfulCalls(plannedToolCalls)) {
+  <span class="kw">return</span> { plannedToolCalls: [] }  <span class="cm">// 模型也没输出 → 直接回答</span>
+}
+<span class="kw">return</span> { plannedToolCalls }  <span class="cm">// 使用模型原始的 tool plan</span></pre>
+  </div>
+
+  <h3>2.5 Schema 定义（模型输出的 JSON 格式）</h3>
+  <div style="margin:12px 0;">
+    <pre><span class="cm">// provider.ts / local-provider.ts 中的 Zod schema</span>
+<span class="cm">// 微调训练数据的输出格式与此完全一致</span>
+
+<span class="kw">const</span> aiSdkPlanSchema = z.object({
+  plannedToolCalls: z.array(
+    z.object({
+      name: z.string(),                    <span class="cm">// ← OpenAI 格式（原 toolName）</span>
+      args: z.record(z.string(), z.unknown()), <span class="cm">// ← 参数 { path, content, query, ... }</span>
+    }),
+  ),
+  finalAnswerPrompt: z.string(),
+})</pre>
+  </div>
+
+  <h3>2.6 四种 Provider 对比</h3>
+  <table>
+    <tr><th>Provider</th><th>使用模型</th><th>生成方式</th><th>heuristic</th><th>适用场景</th></tr>
+    <tr><td>Heuristic</td><td>无</td><td>纯关键词匹配</td><td>自身就是</td><td>兜底、开发测试</td></tr>
+    <tr><td>Local (🎯)</td><td>qwen2.5:1.5b</td><td>generateObject + heuristic 覆盖</td><td>有，优先于模型</td><td>本地 1.5B 部署</td></tr>
+    <tr><td>AiSdk</td><td>deepseek-v3 等</td><td>generateObject</td><td>无</td><td>云端 API</td></tr>
+    <tr><td>DeepSeek</td><td>deepseek-chat</td><td>runWithTools (AI SDK tool calling)</td><td>无</td><td>云端 API，支持多轮</td></tr>
+  </table>
+</div>
+
+<!-- ═══ 3. 微调原理 ═══ -->
+<div class="card">
+  <h2><span class="icon">🧠</span> 三、微调原理</h2>
+
+  <h3>3.1 为什么要微调而非换模型？</h3>
   <div class="grid-2">
     <div style="background:rgba(255,107,157,0.05);border-radius:8px;padding:14px;border:1px solid rgba(255,107,157,0.15);">
       <div style="font-weight:600;color:var(--accent3);margin-bottom:6px;">❌ 当前 1.5B 的问题</div>
@@ -290,7 +500,7 @@ pre .num { color: var(--accent4); }
     </div>
   </div>
 
-  <h3>2.2 LoRA 原理</h3>
+  <h3>3.2 LoRA 原理</h3>
   <div style="text-align:center;margin:16px 0;">
     <svg viewBox="0 0 700 190" style="width:100%;max-width:700px;height:auto;">
       <!-- 全量微调 -->
@@ -300,23 +510,17 @@ pre .num { color: var(--accent4); }
       <text x="100" y="84" text-anchor="middle" fill="var(--text2)" font-size="10">更新全部 1.5B 参数</text>
       <text x="100" y="115" text-anchor="middle" fill="var(--text2)" font-size="10">❌ 显存不够 (需要 &gt;24GB)</text>
       <text x="100" y="135" text-anchor="middle" fill="var(--text2)" font-size="10">❌ 有灾难性遗忘风险</text>
-
-      <!-- 箭头 -->
       <line x1="165" y1="50" x2="215" y2="50" stroke="var(--border)" stroke-width="2"/>
       <polygon points="215,45 225,50 215,55" fill="var(--border)"/>
-
-      <!-- LoRA 微调 -->
+      <!-- LoRA -->
       <rect x="230" y="20" width="160" height="40" rx="6" fill="rgba(124,92,252,0.1)" stroke="var(--accent)" stroke-width="1.5"/>
       <text x="310" y="45" text-anchor="middle" fill="var(--accent)" font-size="13" font-weight="600">LoRA 微调 ✅</text>
       <rect x="230" y="65" width="160" height="28" rx="4" fill="rgba(124,92,252,0.05)" stroke="rgba(124,92,252,0.3)" stroke-width="1"/>
       <text x="310" y="84" text-anchor="middle" fill="var(--text2)" font-size="10">冻结原权重，注入低秩矩阵</text>
       <text x="310" y="115" text-anchor="middle" fill="var(--text2)" font-size="10">✅ T4 16GB 即可运行</text>
       <text x="310" y="135" text-anchor="middle" fill="var(--text2)" font-size="10">✅ 原能力不丢失</text>
-
-      <!-- 箭头 -->
       <line x1="395" y1="50" x2="445" y2="50" stroke="var(--border)" stroke-width="2"/>
       <polygon points="445,45 455,50 445,55" fill="var(--border)"/>
-
       <!-- QLoRA -->
       <rect x="460" y="20" width="190" height="40" rx="6" fill="rgba(107,203,119,0.1)" stroke="var(--green)" stroke-width="1.5"/>
       <text x="555" y="45" text-anchor="middle" fill="var(--green)" font-size="13" font-weight="600">QLoRA (我们用的) ✅</text>
@@ -324,122 +528,46 @@ pre .num { color: var(--accent4); }
       <text x="555" y="84" text-anchor="middle" fill="var(--text2)" font-size="10">LoRA + 4-bit 量化</text>
       <text x="555" y="115" text-anchor="middle" fill="var(--text2)" font-size="10">✅ 显存从 ~12GB → ~6GB</text>
       <text x="555" y="135" text-anchor="middle" fill="var(--text2)" font-size="10">✅ 精度损失 &lt; 1%</text>
-
-      <!-- 公式 -->
       <text x="310" y="170" text-anchor="middle" fill="var(--text2)" font-size="11">LoRA: W' = W₀ + ΔW = W₀ + BA （B∈ℝ^{d×r}, A∈ℝ^{r×k}, r=16）</text>
     </svg>
   </div>
 
-  <h3>2.3 模型内部数据流向（推理时）</h3>
-  <div style="margin:12px 0;">
-    <pre>用户输入: "帮我写一个python代码是斐波那契数列"
-        │
-        ▼
-  ┌───────────────────────────────────────────────────────────────────┐
-  │  07-runner/local-provider.ts  (微调作用层)                         │
-  │                                                                   │
-  │  1. 构建 prompt = system prompt + tool 列表 + 用户输入              │
-  │  2. generateObject({ model: qwen2.5:1.5b, schema: aiSdkPlanSchema })│
-  │  3. 模型输出 JSON → normalizePlannedCalls → PlannedToolCall[]     │
-  └───────────────────────────────────────────────────────────────────┘
-        │
-        ▼
-  output: [{ name: "write_file", args: { path: "...", content: "..." } }]
-        │
-        ▼
-  07-runner/wrapper.ts → 逐工具执行 → 10-executor → 结果返回</pre>
-  </div>
-
-  <h3>2.4 微调前后对比</h3>
+  <h3>3.3 微调前后对比</h3>
   <table>
     <tr><th>场景</th><th>微调前</th><th>微调后（期望）</th></tr>
-    <tr><td>"帮我写成粉色"</td><td><span style="color:var(--red);">无工具调用，乱回答</span></td><td><span style="color:var(--green);">patch_file(search:"&lt;/head&gt;", replace:"...")</span></td></tr>
+    <tr><td>"帮我改成粉色"</td><td><span style="color:var(--red);">无工具调用，乱回答</span></td><td><span style="color:var(--green);">patch_file(search:"&lt;/head&gt;", replace:"...")</span></td></tr>
     <tr><td>"你的json格式是什么"</td><td><span style="color:var(--red);">回声问题</span></td><td><span style="color:var(--green);">无工具，直接回答格式说明</span></td></tr>
     <tr><td>"帮我写情书"</td><td><span style="color:var(--red);">安全拒绝：不能生成浪漫内容</span></td><td><span style="color:var(--green);">write_file 生成情书内容</span></td></tr>
-    <tr><td>"搜索某某"</td><td><span style="color:var(--red);">hecuristic 未覆盖则不调搜索</span></td><td><span style="color:var(--green);">web_search(query="...")</span></td></tr>
+    <tr><td>"搜索某某"</td><td><span style="color:var(--red);">heuristic 未覆盖则不调搜索</span></td><td><span style="color:var(--green);">web_search(query="...")</span></td></tr>
     <tr><td>"你好"</td><td><span style="color:var(--green);">heuristic 拦截，正确回答</span></td><td><span style="color:var(--green);">依然正确（不退化）</span></td></tr>
   </table>
 </div>
 
-<!-- ═══ 3. 数据流向 ═══ -->
+<!-- ═══ 4. 模拟运行动画 ═══ -->
 <div class="card">
-  <h2><span class="icon">🔄</span> 三、完整数据流向</h2>
+  <h2><span class="icon">▶️</span> 四、模拟运行动画</h2>
+  <p>点击"开始运行"观察 catnip 处理 "帮我写一个贪吃蛇html然后打开" 的完整过程：</p>
 
-  <div class="flowchart">
-    <div class="flow-node"><span class="fn-label">用户输入</span><span class="fn-sub">"写一个html然后打开"</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node"><span class="fn-label">Gateway</span><span class="fn-sub">解析入队</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node"><span class="fn-label">Queue</span><span class="fn-sub">调度</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node"><span class="fn-label">Harness</span><span class="fn-sub">生命周期</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node"><span class="fn-label">Context</span><span class="fn-sub">构建上下文</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node"><span class="fn-label">Memory</span><span class="fn-sub">注入 working set</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node target"><span class="fn-label" style="color:var(--accent3);">🎯 Runner</span><span class="fn-sub">模型生成 tool plan</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node"><span class="fn-label">Executor</span><span class="fn-sub">执行工具</span></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node"><span class="fn-label">返回结果</span><span class="fn-sub">回答用户</span></div>
-  </div>
-
-  <h3>Runner 层内部数据流（细粒度）</h3>
-  <div style="margin:12px 0;">
-    <pre>
-<span class="cm">// 输入: MemoryEnrichedRunContext</span>
-{
-  task: { input: <span class="str">"帮我写一个html然后打开"</span> },
-  memory: {
-    workingSet: {
-      focusedFilePath: <span class="str">"workspaces/demo/task_output.html"</span>,
-      openableHtmlPaths: [<span class="str">"workspaces/demo/task_output.html"</span>]
-    }
-  },
-  workspace: { root: <span class="str">"F:/catnipmvp-windows-mainline"</span> }
-}
-       │
-       ▼
-<span class="cm">// Prompt 组装（包含 system prompt + tool list + working memory）</span>
-<span class="kw">const</span> prompt = [
-  <span class="str">"You are a coding agent..."</span>,
-  PLATFORM_HINT,
-  <span class="str">"Current working memory: - Focused file: ..."</span>,
-  <span class="str">"Task: 帮我写一个html然后打开"</span>,
-  <span class="str">"Allowed tools:\n- write_file (medium): Write a single file..."</span>,
-].join(<span class="str">"\n\n"</span>)
-       │
-       ▼
-<span class="cm">// generateObject → 模型输出 JSON</span>
-{
-  plannedToolCalls: [
-    { name: <span class="str">"write_file"</span>, args: { path: <span class="str">"workspaces/demo/task_output.html"</span>, content: <span class="str">"..."</span> } },
-    { name: <span class="str">"open_browser"</span>, args: { path: <span class="str">"workspaces/demo/task_output.html"</span> } }
-  ],
-  finalAnswerPrompt: <span class="str">"已创建并打开 HTML 文件。"</span>
-}
-       │
-       ▼
-<span class="cm">// normalizePlannedCalls → PlannedToolCall[]</span>
-<span class="cm">// 过滤未知工具，规范化参数默认值</span>
-       │
-       ▼
-<span class="cm">// wrapper.ts: 逐工具执行</span>
-<span class="kw">for</span> (<span class="kw">const</span> plannedCall <span class="kw">of</span> plan.plannedToolCalls) {
-  <span class="kw">await</span> executeToolCall(plannedCall)
-}
-       │
-       ▼
-<span class="cm">// Executor: 权限校验(guard.ts) → 执行工具(tools.ts) → 返回结果</span></pre>
+  <div class="sim-container">
+    <div class="sim-header">
+      <h4>🎮 执行模拟器</h4>
+      <div class="sim-controls">
+        <button class="sim-btn primary" id="simStartBtn" onclick="startSim()">▶ 开始运行</button>
+        <button class="sim-btn" id="simResetBtn" onclick="resetSim()">↺ 重置</button>
+        <button class="sim-btn" id="simSkipBtn" onclick="skipSim()">⏭ 跳过</button>
+      </div>
+    </div>
+    <div class="sim-output" id="simOutput">
+      <div style="color:var(--text2);font-style:italic;padding:20px 0;text-align:center;">点击"开始运行"查看执行过程...</div>
+    </div>
   </div>
 </div>
 
-<!-- ═══ 4. 训练数据方案 ═══ -->
+<!-- ═══ 5. 训练数据方案 ═══ -->
 <div class="card">
-  <h2><span class="icon">📊</span> 四、训练数据方案</h2>
+  <h2><span class="icon">📊</span> 五、训练数据方案</h2>
 
-  <h3>4.1 数据格式</h3>
+  <h3>5.1 数据格式</h3>
   <pre>{
   <span class="kw">"instruction"</span>: <span class="str">"帮我写一个python代码是斐波那契数列"</span>,
   <span class="kw">"output"</span>: {
@@ -456,7 +584,7 @@ pre .num { color: var(--accent4); }
   }
 }</pre>
 
-  <h3>4.2 数据量分配（8000 条）</h3>
+  <h3>5.2 数据量分配（8000 条）</h3>
   <div class="cost-row">
     <div class="cost-card purple">
       <div class="cc-num">3,500</div>
@@ -493,9 +621,9 @@ pre .num { color: var(--accent4); }
   </table>
 </div>
 
-<!-- ═══ 5. 训练参数 ═══ -->
+<!-- ═══ 6. 训练配置 ═══ -->
 <div class="card">
-  <h2><span class="icon">⚙️</span> 五、训练配置</h2>
+  <h2><span class="icon">⚙️</span> 六、训练配置</h2>
 
   <div class="param-grid">
     <div class="param-item"><div class="pk">基础模型</div><div class="pv">qwen2.5:1.5b</div></div>
@@ -512,7 +640,7 @@ pre .num { color: var(--accent4); }
     <div class="param-item"><div class="pk">训练/验证/测试</div><div class="pv">85% / 10% / 5%</div></div>
   </div>
 
-  <h3>训练流程</h3>
+  <h3>部署流程</h3>
   <div class="flowchart">
     <div class="flow-node highlight"><span class="fn-label">JSONL 数据</span><span class="fn-sub">8000 条</span></div>
     <div class="flow-arrow">→</div>
@@ -530,9 +658,9 @@ pre .num { color: var(--accent4); }
   </div>
 </div>
 
-<!-- ═══ 6. 评估 ═══ -->
+<!-- ═══ 7. 评估 ═══ -->
 <div class="card">
-  <h2><span class="icon">📈</span> 六、评估体系</h2>
+  <h2><span class="icon">📈</span> 七、评估体系</h2>
 
   <table>
     <tr><th>指标</th><th>当前</th><th>目标</th><th>测量方式</th></tr>
@@ -544,9 +672,9 @@ pre .num { color: var(--accent4); }
   </table>
 </div>
 
-<!-- ═══ 7. 执行时间线 ═══ -->
+<!-- ═══ 8. 执行时间线 ═══ -->
 <div class="card">
-  <h2><span class="icon">⏱️</span> 七、执行时间线</h2>
+  <h2><span class="icon">⏱️</span> 八、执行时间线</h2>
 
   <div class="timeline">
     <div class="tl-item">
@@ -602,9 +730,9 @@ pre .num { color: var(--accent4); }
   </div>
 </div>
 
-<!-- ═══ 8. 风险 ═══ -->
+<!-- ═══ 9. 风险 ═══ -->
 <div class="card">
-  <h2><span class="icon">⚠️</span> 八、风险与缓解</h2>
+  <h2><span class="icon">⚠️</span> 九、风险与缓解</h2>
   <table>
     <tr><th>风险</th><th>概率</th><th>缓解措施</th></tr>
     <tr><td>DeepSeek V4 Pro 格式错误</td><td>中</td><td>自动校验脚本过滤非法格式行 + 重试</td></tr>
@@ -622,5 +750,182 @@ pre .num { color: var(--accent4); }
 </div>
 
 </div>
+
+<!-- ═══ Simulator Script ═══ -->
+<script>
+const SIM_LINES = [
+  { tag: 'sys', text: '[gateway] 收到用户输入: "帮我写一个贪吃蛇html然后打开"' },
+  { tag: 'sys', text: '[queue] 任务入队，等待调度...' },
+  { tag: 'sys', text: '[queue] 任务已分发，waited=0s' },
+  { tag: 'sys', text: '[harness] run started' },
+  { tag: 'sys', text: '[context] 构建运行上下文完成 docs=0 skills=1 memory=0' },
+  { tag: 'sys', text: '[stage] 进入 07-runner 层 — 从该层开始为微调作用域 ▸' },
+  { tag: 'plan', text: '' },
+  { tag: 'plan', text: '═══ 1. 构建 Prompt ═══' },
+  { tag: 'plan', text: '📝 system: "You are a coding agent that MUST use tools..."' },
+  { tag: 'plan', text: '📝 platform: "This agent runs on Windows..."' },
+  { tag: 'plan', text: '📝 tools: write_file, open_browser, web_search, ...' },
+  { tag: 'plan', text: '📝 memory: "Current working memory: - Focused file: none..."' },
+  { tag: 'plan', text: '📝 task: "帮我写一个贪吃蛇html然后打开"' },
+  { tag: 'plan', text: '' },
+  { tag: 'plan', text: '═══ 2. generateObject（🎯 微调作用点）═══' },
+  { tag: 'plan', text: '⚡ 调用: generateObject({ model: qwen2.5:1.5b, schema: aiSdkPlanSchema })' },
+  { tag: 'plan', text: '⏳ 模型推理中... (1.5B, ~3秒)' },
+  { tag: 'plan', text: '✅ 模型输出 JSON:' },
+  { tag: 'plan', text: '   {', cls: 'hl' },
+  { tag: 'plan', text: '     "plannedToolCalls": [', cls: 'hl' },
+  { tag: 'plan', text: '       { "name": "write_file", "args": {', cls: 'hl' },
+  { tag: 'plan', text: '         "path": "workspaces/demo/task_output.html",', cls: 'hl' },
+  { tag: 'plan', text: '         "content": "<!DOCTYPE html>..."', cls: 'hl' },
+  { tag: 'plan', text: '       } },', cls: 'hl' },
+  { tag: 'plan', text: '       { "name": "open_browser", "args": {', cls: 'hl' },
+  { tag: 'plan', text: '         "path": "workspaces/demo/task_output.html"', cls: 'hl' },
+  { tag: 'plan', text: '       } }', cls: 'hl' },
+  { tag: 'plan', text: '     ],', cls: 'hl' },
+  { tag: 'plan', text: '     "finalAnswerPrompt": "已创建贪吃蛇HTML文件并在浏览器中打开。"', cls: 'hl' },
+  { tag: 'plan', text: '   }', cls: 'hl' },
+  { tag: 'plan', text: '' },
+  { tag: 'plan', text: '═══ 3. normalizePlannedCalls ═══' },
+  { tag: 'plan', text: '🔍 校验 toolName → 匹配 availableTools 列表' },
+  { tag: 'plan', text: '🔍 规范化参数: path → workspaces/demo/task_output.html' },
+  { tag: 'plan', text: '✅ 2 个工具调用通过验证' },
+  { tag: 'plan', text: '' },
+  { tag: 'plan', text: '═══ 4. Heuristic 检查（local-provider 特有） ═══' },
+  { tag: 'plan', text: '🔍 匹配 "写" → writeTask = true' },
+  { tag: 'plan', text: '🔍 匹配 "打开" → hasOpenIntent = true' },
+  { tag: 'plan', text: '🔍 Route A: generateContent() 生成真实 HTML 内容...' },
+  { tag: 'plan', text: '✅ Heuristic 命中！使用 heuristic tool plan（模型输出被覆盖）' },
+  { tag: 'plan', text: '' },
+  { tag: 'act', text: '[step 1/2] write_file → workspaces/demo/task_output.html (224 bytes)' },
+  { tag: 'done', text: '[done] 已写入: <!DOCTYPE html> <html>...' },
+  { tag: 'act', text: '[step 2/2] open_browser → workspaces/demo/task_output.html' },
+  { tag: 'done', text: '[done] 已在浏览器中打开 task_output.html' },
+  { tag: 'ans', text: '[answer] 已创建贪吃蛇HTML文件并在浏览器中打开。' },
+  { tag: 'sys', text: '[run] finished success=true steps=2 toolSummaries=2' },
+];
+
+let simRunning = false;
+let simPaused = false;
+let simIndex = 0;
+let simTimer = null;
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function startSim() {
+  if (simRunning) return;
+  simRunning = true;
+  document.getElementById('simStartBtn').disabled = true;
+
+  // If we already completed, reset first
+  if (simIndex >= SIM_LINES.length) {
+    resetSim();
+    await sleep(100);
+  }
+
+  const output = document.getElementById('simOutput');
+  if (simIndex === 0) output.innerHTML = '';
+
+  for (let i = simIndex; i < SIM_LINES.length; i++) {
+    if (!simRunning) break;
+    const line = SIM_LINES[i];
+    const div = document.createElement('div');
+    div.className = 'sim-line';
+
+    let tagClass = '';
+    switch (line.tag) {
+      case 'sys': tagClass = 'tag-sys'; break;
+      case 'plan': tagClass = 'tag-plan'; break;
+      case 'act': tagClass = 'tag-act'; break;
+      case 'done': tagClass = 'tag-done'; break;
+      case 'ans': tagClass = 'tag-ans'; break;
+    }
+
+    let inner = '';
+    if (line.tag !== 'plan') {
+      inner = `<span class="${tagClass}">[${line.tag}]</span> ${line.text}`;
+    } else if (line.text.startsWith('═══') || line.text === '') {
+      if (line.cls === 'hl') {
+        inner = `<span style="color:var(--accent4);">${line.text}</span>`;
+      } else {
+        inner = `<span style="color:var(--accent2);">${line.text}</span>`;
+      }
+    } else if (line.cls === 'hl') {
+      inner = `<span style="color:var(--accent4);">${line.text}</span>`;
+    } else {
+      inner = `<span style="color:var(--text);">${line.text}</span>`;
+    }
+
+    div.innerHTML = inner;
+    output.appendChild(div);
+    output.scrollTop = output.scrollHeight;
+
+    simIndex = i + 1;
+
+    // Variable timing based on line type
+    if (line.tag === 'sys') await sleep(200);
+    else if (line.tag === 'plan') await sleep(80);
+    else if (line.tag === 'act') await sleep(400);
+    else if (line.tag === 'done') await sleep(300);
+    else if (line.tag === 'ans') await sleep(500);
+    else await sleep(50);
+
+    if (!simRunning) break;
+  }
+
+  simRunning = false;
+  document.getElementById('simStartBtn').disabled = false;
+}
+
+function resetSim() {
+  simRunning = false;
+  simIndex = 0;
+  if (simTimer) { clearTimeout(simTimer); simTimer = null; }
+  document.getElementById('simStartBtn').disabled = false;
+  document.getElementById('simOutput').innerHTML =
+    '<div style="color:var(--text2);font-style:italic;padding:20px 0;text-align:center;">点击"开始运行"查看执行过程...</div>';
+}
+
+function skipSim() {
+  if (simIndex >= SIM_LINES.length) return;
+  simRunning = false;
+  if (simTimer) { clearTimeout(simTimer); simTimer = null; }
+
+  const output = document.getElementById('simOutput');
+  if (simIndex === 0) output.innerHTML = '';
+
+  for (let i = simIndex; i < SIM_LINES.length; i++) {
+    const line = SIM_LINES[i];
+    const div = document.createElement('div');
+    div.className = 'sim-line';
+
+    let tagClass = '';
+    switch (line.tag) {
+      case 'sys': tagClass = 'tag-sys'; break;
+      case 'plan': tagClass = 'tag-plan'; break;
+      case 'act': tagClass = 'tag-act'; break;
+      case 'done': tagClass = 'tag-done'; break;
+      case 'ans': tagClass = 'tag-ans'; break;
+    }
+
+    let inner = '';
+    if (line.tag !== 'plan') {
+      inner = `<span class="${tagClass}">[${line.tag}]</span> ${line.text}`;
+    } else if (line.text.startsWith('═══') || line.text === '') {
+      inner = `<span style="color:var(--accent2);">${line.text}</span>`;
+    } else if (line.cls === 'hl') {
+      inner = `<span style="color:var(--accent4);">${line.text}</span>`;
+    } else {
+      inner = `<span style="color:var(--text);">${line.text}</span>`;
+    }
+
+    div.innerHTML = inner;
+    output.appendChild(div);
+  }
+
+  output.scrollTop = output.scrollHeight;
+  simIndex = SIM_LINES.length;
+  document.getElementById('simStartBtn').disabled = false;
+}
+</script>
 </body>
 </html>
