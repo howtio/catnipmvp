@@ -1302,7 +1302,17 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
 
       // When running as a standalone .exe with no args, default to interactive
       if (mergedTasks.length === 0 && isStandaloneExe()) {
-        await startInteractiveCli();
+        if (process.stdin.isTTY) {
+          await startInteractiveCli();
+        } else {
+          const stdinText = await readStdinText();
+          if (stdinText.length > 0) {
+            await runTaskBatch([stdinText], createId("session"), debugEnabled);
+          } else {
+            console.error("[gateway] no task input provided");
+            process.exitCode = 1;
+          }
+        }
         return;
       }
 
