@@ -326,11 +326,19 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
         `Workspace root: ${context.workspace.root}`,
       ].join("\n\n");
 
+      if (process.env.CATNIP_CLI_DEBUG === "1") {
+        console.log("\n=== PROMPT TO MODEL ===\n" + prompt.slice(0, 3000) + "\n=======================\n");
+      }
+
       const { object } = await generateObject({
         model: llm,
         schema: aiSdkPlanSchema,
         prompt,
       });
+
+      if (process.env.CATNIP_CLI_DEBUG === "1") {
+        console.log("\n=== MODEL RESPONSE ===\n" + JSON.stringify(object, null, 2) + "\n=======================\n");
+      }
 
       const plannedToolCalls = normalizePlannedCalls(object.plannedToolCalls, availableTools);
 
