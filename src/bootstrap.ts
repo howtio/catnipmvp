@@ -120,7 +120,9 @@ export function bootstrapCatnipAgent() {
     },
   });
   const skills = createSkillsLayer();
-  const memory = createMemoryLayer();
+  const memory = createMemoryLayer({
+    maxEntries: readPositiveIntegerEnv("CATNIP_MEMORY_MAX_ENTRIES", 3),
+  });
   const context = createContextLayer();
   const harness = createHarnessLayer({
     context,

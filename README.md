@@ -1,5 +1,92 @@
 # catnipmvp
-its my mvp agent for catnipent
+
+Personal AI agent MVP — runs locally on Windows with Ollama small models, or via DeepSeek API.
+
+## 本地部署（Ollama + 本地模型）
+
+### 1. 安装 Ollama
+
+从 [ollama.com](https://ollama.com) 下载 Windows 安装包并安装。
+
+安装后 Ollama 会自动注册为 Windows 系统服务，开机自启。
+
+验证安装：
+
+```powershell
+ollama --version
+```
+
+### 2. 下载模型
+
+推荐模型（按资源需求排序）：
+
+| 模型 | 大小 | 特点 |
+|------|------|------|
+| `qwen2.5:1.5b` | ~900MB | 默认模型，响应快，聊天体验好 |
+| `qwen3:1.7b` | ~1.1GB | 比 1.5B 略强 |
+| `deepseek-r1:1.5b` | ~1.1GB | 规划准确，但有 thinking 首包延迟 |
+| `qwen2.5:0.5b` | ~400MB | 最轻量，适合低配机器 |
+
+下载模型（以默认模型为例）：
+
+```powershell
+ollama pull qwen2.5:1.5b
+```
+
+### 3. 配置环境变量
+
+在项目根目录创建 `.env` 文件（或复制 `.env.example` 后修改）：
+
+```ini
+CATNIP_RUNNER_PROVIDER=local
+CATNIP_LOCAL_MODEL=qwen2.5:1.5b
+CATNIP_LOCAL_HOST=http://localhost:11434
+```
+
+各环境变量说明：
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `CATNIP_RUNNER_PROVIDER` | `auto` | 设为 `local` 强制本地模式 |
+| `CATNIP_LOCAL_MODEL` | `qwen2.5:1.5b` | Ollama 模型名 |
+| `CATNIP_LOCAL_HOST` | `http://localhost:11434` | Ollama 服务地址 |
+| `CATNIP_MEMORY_MAX_ENTRIES` | `3` | 记忆条目数（32K 上下文建议 3） |
+| `CATNIP_RUNNER_MAX_STEPS` | `10` | 最大工具调用步数 |
+| `CATNIP_RUN_TIMEOUT_MS` | `180000` | 单次运行超时（毫秒） |
+
+### 4. 运行
+
+**方式 A：直接运行（需要 Node 24+）**
+
+```bash
+npm install
+npm run build
+node dist/src/main.js --interactive
+```
+
+**方式 B：编译为独立 exe（无需 Node）**
+
+```bash
+npm run build-sea
+./catnip.exe --interactive
+```
+
+**方式 C：启动脚本**
+
+```powershell
+.\start-catnip.cmd local
+```
+
+### 5. 验证
+
+```bash
+./catnip.exe "你好"
+```
+
+- 看到 `[plan] no tool calls` 和回答说明运行正常
+- 再试写文件：`./catnip.exe "帮我写一个python hello world"`
+
+---
 
 ## CLI quick start
 
@@ -7,11 +94,9 @@ its my mvp agent for catnipent
 - Multi-task batch: `node dist/src/main.js --task "readme and git diff" --task "shell status"`
 - Tasks from file: `node dist/src/main.js --tasks-file tasks.txt`
 - Interactive: `node dist/src/main.js --interactive`
+- exe interactive: `./catnip.exe` (double-click or command line)
 - Debug single task: `node dist/src/main.js --debug "readme and git diff"`
 - Pipe input: `echo "readme and git diff" | node dist/src/main.js`
-- HTML preview smoke: `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "create file html and open browser run html"`
-- Web search smoke: `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "web search latest catnip agent runtime and open browser search"`
-- Open url smoke: `CATNIP_RUNNER_PROVIDER=heuristic CATNIP_BROWSER_OPEN_BIN=true node dist/src/main.js "open url https://example.com/result"`
 
 ## CLI timeline
 

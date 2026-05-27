@@ -1,5 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateObject } from "ai";
+import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import { platform } from "node:process";
 import type { MemoryEnrichedRunContext } from "../06.5-memory/index.js";
@@ -225,6 +225,30 @@ function guessFileName(task: string, ext: string): string {
   return `task_output.${ext}`;
 }
 
+async function generateContent(
+  model: Parameters<typeof generateText>[0]["model"],
+  task: string,
+  ext: string,
+): Promise<string> {
+  const isCode = ["py", "js", "ts", "java", "cpp", "rs", "go", "sh", "rb", "php", "css"].includes(ext);
+
+  const systemPrompt = isCode
+    ? "You are a code generator. Output ONLY the source code with no explanation, no markdown formatting, no backticks. Just raw code."
+    : "You are a content writer. Output ONLY the requested content with no explanation, no meta-commentary. Just the raw text.";
+
+  const { text } = await generateText({
+    model,
+    system: systemPrompt,
+    prompt: task,
+  });
+
+  // Strip markdown code fences that small models often add despite instructions
+  return text.trim()
+    .replace(/^```\w*\n?/, "")
+    .replace(/\n?```\s*$/, "")
+    .trim();
+}
+
 export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = {}): RunnerProvider {
   const host = options.host ?? process.env.CATNIP_LOCAL_HOST ?? OLLAMA_DEFAULT_HOST;
   const model = options.model ?? process.env.CATNIP_LOCAL_MODEL ?? "qwen2.5:1.5b";
@@ -313,6 +337,20 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
 
       // 1.5B local model cannot reliably plan tools. Use heuristic for known task patterns.
       const task = context.task.input;
+      const trimmedTask = task.trim();
+
+      // Greeting / identity check: answer directly without tools.
+      // 1.5B models tend to plan read_file or shell_exec for simple Q&A, so intercept early.
+      if (
+        /^(你好|hello\b|hi\b|hey\b|您好)\b/i.test(trimmedTask) ||
+        /你是谁|你叫什么|你是什么|who are you|what are you/i.test(task)
+      ) {
+        return {
+          plannedToolCalls: [],
+          finalAnswerPrompt: object.finalAnswerPrompt,
+        };
+      }
+
       const toolDef = (name: string) => availableTools.find((t) => t.name === name);
 
       // Build a tool call with validation
@@ -321,9 +359,12 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
         return def ? { toolName: name, permission: def.permission, args, reason } : undefined;
       };
 
+      // Detect browser intent: "打开" / "预览" / "preview" (also catches standalone "打开" at end like "写html然后打开")
+      const hasOpenIntent = /打开|预览|preview/i.test(task);
+
       // Heuristic dispatch: check task against known patterns in priority order
-      const openBrowserTask = /打开.*浏览器|open.*browser|浏览器|预览/i.test(task);
       const writeTask = /写|创建|create|make|generate|编写|产生|code|代码|script|脚本|生成/i.test(task);
+      const openBrowserTask = /打开.*浏览器|open.*browser|浏览器|预览/i.test(task) || (hasOpenIntent && !writeTask);
       const shellTask = /运行|run|执行|execute|install|编译|build|npm|git/i.test(task);
       const searchTask = /搜索|search|查找|query|搜/i.test(task);
       const openUrlTask = /打开.*链接|open.*url|访问.*网站|visit/i.test(task);
@@ -338,8 +379,25 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
         const ext = guessFileExtension(task);
         const fileName = guessFileName(task, ext);
         const path = fileName.startsWith("workspaces/") ? fileName : `workspaces/demo/${fileName}`;
-        const c = call("write_file", { path, content: generateFileContent(ext, task, object.finalAnswerPrompt) }, `Write ${fileName} as requested`);
+
+        // Use the local model to generate real content instead of templates.
+        // The 1.5B model is unreliable at planning tool calls but can generate text/code well.
+        let content: string;
+        try {
+          content = await generateContent(llm, task, ext);
+        } catch {
+          content = generateFileContent(ext, task, object.finalAnswerPrompt);
+        }
+
+        const c = call("write_file", { path, content }, `Write ${fileName} as requested`);
         if (c) heuristicCalls.push(c);
+
+        // If writeTask generates an HTML file and user also wants to open/preview it,
+        // add open_browser with the SAME path to fix the path mismatch.
+        if (ext === "html" && hasOpenIntent) {
+          const bc = call("open_browser", { path }, `Open ${fileName} in browser after writing.`);
+          if (bc) heuristicCalls.push(bc);
+        }
       }
 
       if (openBrowserTask && !writeTask) {

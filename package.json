@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "npm run build && node --test dist/tests/**/*.test.js"
+    "test": "npm run build && node --test dist/tests/**/*.test.js",
+    "build-sea": "npm run build && npx esbuild dist/src/main.js --bundle --platform=node --target=node24 --outfile=dist/catnip-sea.cjs && node --experimental-sea-config sea-config.json && node -e \"const fs=require('fs'); const p=process.execPath; const o='catnip.exe'; fs.copyFileSync(p, o); console.log('Copied node to '+o+' ('+fs.statSync(o).size+' bytes)');\" && npx postject catnip.exe NODE_SEA_BLOB dist/sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 && echo SEA build complete: catnip.exe"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",

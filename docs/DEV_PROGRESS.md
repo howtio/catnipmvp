@@ -164,6 +164,10 @@
 - `CATNIP_DEV_CONTEXT=1` 控制开发文档加载，默认运行时 `docs=0`
 - 写任务强制 heuristic，完全忽略模型的工具计划（1.5B 模型不可靠）
 - 重建 catnip.exe（Node 24.13.1 sentinel）
+- **Write 任务模型生成真实内容**（修复 5）：
+  - write 任务不再写 `generateFileContent()` 模板，改用 `generateText` 让本地模型生成真实代码/文本
+  - 自动剥离小模型常加的 markdown 代码块标记
+  - 修复后：斐波那契 → 真实 Python 代码，情书 → 真实情书文本
 
 ### 未开始
 
