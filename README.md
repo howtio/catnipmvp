@@ -20,7 +20,8 @@ ollama --version
 
 当前默认模型：`gemma3:1b`（速度最快，~815MB）
 
-所有模型均为 Ollama 格式（GGUF Q4_K_M 量化），**纯 CPU 可运行**，无需 GPU。
+所有模型均为 Ollama 格式（GGUF Q4_K_M 量化，大模型标注特殊量化），**纯 CPU 可运行**，无需 GPU。
+根据你的内存选择档次：
 
 | 模型 | 参数 | 磁盘大小 | 最低内存 | 特点 |
 |------|------|----------|----------|------|
@@ -37,7 +38,15 @@ ollama --version
 | `qwen2.5:7b` | 7B | ~4.7 GB | 6 GB | Qwen 2.5 7B 稳定可靠 |
 | `qwen3:8b` | 8B | ~5.2 GB | 8 GB | Qwen 3 8B，中文最强本地选项之一 |
 | `gemma2:9b` | 9B | ~5.5 GB | 8 GB | Gemma 2 9B，英文能力强 |
-| `gemma3:12b` | 12B | ~8.5 GB | 10 GB | **最强本地选项**，工具调用最准确，需足够内存 |
+| `qwen2.5:14b` | 14B | ~9.5 GB | 12 GB | Qwen 2.5 14B，中文能力强 |
+| `deepseek-r1:14b` | 14B | ~9.5 GB | 12 GB | DeepSeek 强推理，有 thinking 过程 |
+| `qwen3:14b` | 14B | ~10 GB | 12 GB | Qwen 3 14B，最新架构中文优秀 |
+| `gemma2:27b` | 27B | ~16 GB | 20 GB | Google Gemma 2 27B，英文很强 |
+| `qwen2.5:32b` | 32B | ~20 GB | 24 GB | Qwen 2.5 32B，中文+工具调用优秀 |
+| `qwen3:30b` | 30B | ~20 GB | 24 GB | Qwen 3 30B，本地最强中文选项之一 |
+| `deepseek-r1:32b` | 32B | ~20 GB | 24 GB | DeepSeek 32B，强推理 |
+| `gemma3:12b` | 12B | ~8.5 GB | 10 GB | **推荐**，工具调用准确率高 |
+| `llama3.3:70b` (Q3_K_M) | 70B | ~30 GB | 36 GB | **极限选项**，70B 级别需 Q3 量化 |
 
 下载模型：
 
