@@ -169,6 +169,15 @@
   - 自动剥离小模型常加的 markdown 代码块标记
   - 修复后：斐波那契 → 真实 Python 代码，情书 → 真实情书文本
 
+### 已完成 (feat/windows4.0-openaitooljson)
+
+- **工具调用格式重构** — `toolName` → `name`，移除 `reason` 字段，50 个测试全部通过
+- **模型切换 `gemma3:1b`** — 默认本地模型从 qwen2.5:1.5b（986MB）切换为 gemma3:1b（815MB），写文件延迟从 5-15s 降至 ~2s
+- **修复 exe `ERR_USE_AFTER_CLOSE`** — 管道输入和非 TTY 终端不再崩溃，`safePrompt()` 包装所有 `rl.prompt()` 调用
+- **`CATNIP_CLI_DEBUG` prompt 日志** — 设 `CATNIP_CLI_DEBUG=1` 可查看完整 prompt（~595 tokens）和模型原始返回
+- **微调方案文档** — 新增 `FINETUNE_PLAN.md`（8000 条样本、$3 成本）和 `FINETUNE_PLAN.html`（架构图+Runner 原理+模拟运行动画）
+- **SEA exe 重新编译** — 默认模型已硬编码为 `gemma3:1b`
+
 ### 未开始
 
 - GitHub 仓库实际接入
@@ -179,8 +188,8 @@
 
 本文件作为实时开发进度日志持续追加，不覆盖旧记录。
 后续所有 Codex 必须先读 `CODEX_MASTER_REQUIREMENTS.md` 再继续开发。
-当前 GitHub 状态：远程已接入，当前分支 `main` 已可 push。注意：上传时不允许带 Claude Code 标签/签名。
+当前 GitHub 状态：远程已接入，当前分支 `feat/windows4.0-openaitooljson`（原 `feat/windows3.0` 分支已封存），已可推送。
 当前安全状态：真实 API Key 不得写入仓库文档，需本地保管并建议轮换。
-当前文档状态：子目录文档已从占位说明提升为可执行说明。
-当前工程状态：已具备可 typecheck 的 TypeScript 骨架，但业务逻辑仍是占位实现。
-当前架构状态：已从原十层升级为 `11` 层结构，其中 `06.5-memory` 固定插在 `06-skills` 与 `07-runner` 之间。
+当前文档状态：微调方案文档已升级为含流程图和模拟动画的完整 HTML 版本。
+当前工程状态：已通过 50 个单元测试，SEA exe 在本地模型（gemma3:1b）下可独立运行。
+当前架构状态：11 层结构稳定，Runner 层 heuristic 兜底 + gemma3:1b 规划，工具调用恢复率 56%。

@@ -1,5 +1,61 @@
 # Construction Log
 
+## 2026-05-27 / Windows / windows4.0-openaitooljson
+
+### 版本
+
+- `feat/windows4.0-openaitooljson`
+
+### 目标
+
+1. 工具调用格式从 `toolName` 重构为 OpenAI 兼容 `name` + `args` 格式
+2. 默认本地模型从 `qwen2.5:1.5b` 切换为 `gemma3:1b`
+3. 修复 exe 在管道输入和非 TTY 终端下崩溃问题
+4. 增加 debug 模式打印 prompt 和模型原始返回
+
+### 本次修改
+
+- **工具调用格式重构** — `PlannedToolCall.toolName` → `name`，`aiSdkPlanSchema` 移除 `reason` 字段，Zod schema、provider、wrapper、planner、guard 全部同步更新
+- **50 个单元测试全部通过** — 重构后无回归
+- **模型切换 gemma3:1b** — 默认模型从 qwen2.5:1.5b（986MB）替换为 gemma3:1b（815MB），写文件任务延迟从 5-15s 降至 ~2s
+- **硬编码默认模型更新** — `local-provider.ts` fallback 改为 `"gemma3:1b"`，exe 不设环境变量时也使用新模型
+- **修复 exe 管道输入崩溃** — `ERR_USE_AFTER_CLOSE`：为 `isStandaloneExe()` 路径加 `process.stdin.isTTY` 判断，无 TTY 时读 stdin 文本跑 batch
+- **修复 `--interactive` 非 TTY 崩溃** — `parsed.interactive` 不再强制进 readline 模式，非 TTY 走 stdin batch
+- **`safePrompt()`** — 所有 `rl.prompt()` 调用加 try-catch，捕获 `ERR_USE_AFTER_CLOSE` 优雅退出
+- **`CATNIP_CLI_DEBUG` prompt 日志** — `local-provider.ts` 增加 debug 输出，设 `CATNIP_CLI_DEBUG=1` 可查看完整 prompt 和模型原始返回
+- **微调方案文档** — 新增 `docs/FINETUNE_PLAN.md`（8000 条样本、混合生成、$3 成本）、`docs/FINETUNE_PLAN.html`（架构图 + Runner 原理 + 模拟运行动画）
+- **start-catnip.cmd、.env.example** 默认模型同步更新为 `gemma3:1b`
+
+### 验证结果
+
+- `npm run typecheck`：通过
+- `npm run build`：通过
+- `npm test`：通过，50 个单元测试全部通过
+- `echo "test" | ./catnip.exe`：无 ERR_USE_AFTER_CLOSE ✅
+- `gemma3:1b` 身份问答："你是谁" → "我是 Catnip Agent" ✅（~1.3s）
+- `gemma3:1b` 写文件："帮我写一个python hello world" → write_file ✅（~2s）
+- `gemma3:1b` 写 HTML+打开："帮我写一个贪吃蛇html然后打开" → write_file + open_browser ✅（~9s）
+- `CATNIP_CLI_DEBUG=1` 显示完整 prompt（595 tokens）和模型原始返回
+
+### 回滚判断
+
+- 本轮未发生需要回滚的功能性错误
+- 工具调用格式重构无回归
+- 如需回滚，可回到 `feat/windows3.0` 分支或 `backup/pre-openaitooljson-20260527`
+
+### 风险
+
+- `gemma3:1b` 模型原始返回仍为空的 `plannedToolCalls: []`，依赖 heuristic 兜底
+- prompt 总 token 数 ~595，其中工具列表占较大比例
+- 内存默认 `CATNIP_MEMORY_MAX_ENTRIES=3`，连续任务的上下文保留有限
+- SEA exe（88.7MB）仍有 GitHub 大文件警告
+
+### 下一步
+
+- 执行 LoRA 微调（Phase 1-5），提升模型自身工具规划能力
+- 持续补充 heuristic 未覆盖的边界案例
+- 微调后尝试减少 heuristic 干预比例
+
 ## 2026-05-25 / Windows / windows3.0 本地 CPU 小模型支持
 
 ### 版本
