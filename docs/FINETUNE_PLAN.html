@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catnip 1.5B 微调方案 — 架构·原理·执行计划</title>
+<style>
+:root {
+  --bg: #0f0f1a;
+  --card: #1a1a2e;
+  --border: #2a2a4a;
+  --accent: #7c5cfc;
+  --accent2: #4fc3f7;
+  --accent3: #ff6b9d;
+  --accent4: #ffd93d;
+  --green: #6bcb77;
+  --red: #ff6b6b;
+  --text: #e0e0f0;
+  --text2: #8888aa;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.6; padding: 20px; }
+.container { max-width: 1100px; margin: 0 auto; }
+
+/* ─── Header ─── */
+header {
+  text-align: center; padding: 40px 0 30px;
+  border-bottom: 1px solid var(--border); margin-bottom: 40px;
+}
+header h1 { font-size: 2rem; background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+header p { color: var(--text2); margin-top: 8px; font-size: 0.95rem; }
+
+/* ─── Card ─── */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 28px; margin-bottom: 24px;
+}
+.card h2 { font-size: 1.3rem; margin-bottom: 16px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.card h2 .icon { font-size: 1.2rem; }
+.card h3 { font-size: 1.05rem; margin: 18px 0 10px; color: var(--accent2); }
+.card h4 { font-size: 0.95rem; margin: 14px 0 8px; color: var(--accent4); }
+.card p, .card li { color: var(--text); font-size: 0.92rem; }
+.card ul { padding-left: 20px; margin: 8px 0; }
+.card li { margin: 4px 0; }
+.card .tag {
+  display: inline-block; padding: 2px 10px; border-radius: 20px;
+  font-size: 0.75rem; font-weight: 600; margin-right: 4px;
+}
+.tag-purple { background: rgba(124,92,252,0.2); color: var(--accent); }
+.tag-blue { background: rgba(79,195,247,0.2); color: var(--accent2); }
+.tag-pink { background: rgba(255,107,157,0.2); color: var(--accent3); }
+.tag-green { background: rgba(107,203,119,0.2); color: var(--green); }
+.tag-yellow { background: rgba(255,217,61,0.2); color: var(--accent4); }
+
+/* ─── Architecture Layers ─── */
+.layer-diagram { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
+.layer-row {
+  display: flex; align-items: center; border-radius: 8px;
+  padding: 8px 14px; font-size: 0.85rem; gap: 12px;
+  border: 1px solid var(--border); position: relative;
+}
+.layer-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.75rem; flex-shrink: 0;
+}
+.layer-name { font-weight: 600; width: 110px; flex-shrink: 0; }
+.layer-desc { color: var(--text2); flex: 1; font-size: 0.82rem; }
+.layer-arrow { color: var(--text2); font-size: 0.7rem; }
+.highlight-layer {
+  background: rgba(124,92,252,0.08);
+  border-color: rgba(124,92,252,0.3);
+  box-shadow: 0 0 20px rgba(124,92,252,0.05);
+}
+
+/* ─── Flowchart ─── */
+.flowchart { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
+.flow-node {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 18px; text-align: center;
+  min-width: 100px; font-size: 0.82rem;
+}
+.flow-node .fn-label { font-weight: 600; font-size: 0.85rem; display: block; }
+.flow-node .fn-sub { color: var(--text2); font-size: 0.72rem; display: block; margin-top: 4px; }
+.flow-arrow { color: var(--text2); font-size: 1.2rem; font-weight: 300; padding: 0 4px; }
+.flow-node.highlight {
+  border-color: var(--accent); background: rgba(124,92,252,0.1);
+}
+.flow-node.target {
+  border-color: var(--accent3); background: rgba(255,107,157,0.1);
+}
+
+/* ─── Data Flow ─── */
+.dataflow { margin: 16px 0; }
+.df-row { display: flex; align-items: flex-start; margin: 6px 0; padding: 4px 0; }
+.df-label { width: 90px; flex-shrink: 0; font-weight: 600; font-size: 0.82rem; color: var(--accent2); }
+.df-arrow { width: 30px; text-align: center; color: var(--text2); }
+.df-content { flex: 1; font-size: 0.85rem; color: var(--text); font-family: 'Consolas', 'Courier New', monospace; font-size: 0.8rem; }
+.df-content .highlight { color: var(--accent3); }
+
+/* ─── Comparison Table ─── */
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 12px 0; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+th { background: rgba(124,92,252,0.08); color: var(--accent2); font-weight: 600; font-size: 0.82rem; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ─── Training Params Table ─── */
+.param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+.param-item {
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px;
+}
+.param-item .pk { font-size: 0.72rem; color: var(--text2); }
+.param-item .pv { font-size: 0.95rem; font-weight: 600; color: var(--accent2); }
+
+/* ─── Cost Box ─── */
+.cost-row { display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap; }
+.cost-card {
+  flex: 1; min-width: 200px; background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+  text-align: center;
+}
+.cost-card .cc-num { font-size: 1.5rem; font-weight: 700; }
+.cost-card .cc-label { font-size: 0.78rem; color: var(--text2); margin-top: 4px; }
+.cost-card.green .cc-num { color: var(--green); }
+.cost-card.pink .cc-num { color: var(--accent3); }
+.cost-card.purple .cc-num { color: var(--accent); }
+
+/* ─── Timeline ─── */
+.timeline { position: relative; margin: 16px 0; padding-left: 30px; }
+.timeline::before {
+  content: ''; position: absolute; left: 12px; top: 0; bottom: 0;
+  width: 2px; background: var(--border);
+}
+.tl-item { position: relative; margin-bottom: 18px; }
+.tl-item::before {
+  content: ''; position: absolute; left: -24px; top: 6px;
+  width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+}
+.tl-item .tl-phase { font-weight: 600; font-size: 0.88rem; }
+.tl-item .tl-desc { color: var(--text2); font-size: 0.82rem; }
+.tl-item .tl-time { display: inline-block; margin-top: 4px; font-size: 0.72rem;
+  color: var(--accent4); background: rgba(255,217,61,0.1);
+  padding: 1px 10px; border-radius: 10px; }
+
+/* ─── LoRA Detail ─── */
+.lora-viz { margin: 16px 0; }
+.lora-viz svg text { font-family: var(--font); }
+
+/* ─── Code ─── */
+code {
+  background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px;
+  font-family: 'Consolas', 'Courier New', monospace; font-size: 0.8rem;
+}
+pre {
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px; overflow-x: auto; margin: 10px 0;
+  font-size: 0.8rem; font-family: 'Consolas', 'Courier New', monospace;
+  color: #b0b0d0;
+}
+pre .kw { color: var(--accent); }
+pre .str { color: var(--green); }
+pre .cm { color: var(--text2); font-style: italic; }
+pre .num { color: var(--accent4); }
+
+/* ─── Grid ─── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.section-label { display: inline-block; padding: 3px 12px; border-radius: 20px;
+  font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px; }
+.section-label.arch { background: rgba(79,195,247,0.15); color: var(--accent2); }
+.section-label.ft { background: rgba(255,107,157,0.15); color: var(--accent3); }
+.section-label.data { background: rgba(107,203,119,0.15); color: var(--green); }
+.section-label.deploy { background: rgba(255,217,61,0.15); color: var(--accent4); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <h1>Catnip Agent 1.5B 微调方案</h1>
+  <p>qwen2.5:1.5b LoRA Fine-Tuning &bull; 工具调用决策提升 &bull; OpenAI 格式</p>
+</header>
+
+<!-- ═══ 1. 系统架构 ═══ -->
+<div class="card">
+  <h2><span class="icon">🏗️</span> 一、系统架构：11 层全览</h2>
+  <p>Catnip 从用户输入到工具执行经过 11 层。微调的目标层是 <span class="tag tag-pink">07-runner</span> 中的 <code>local-provider.ts</code> — 即 1.5B 模型做工具规划的地方。</p>
+
+  <div class="layer-diagram">
+    <div class="layer-row">
+      <div class="layer-num" style="background:rgba(124,92,252,0.2);color:var(--accent);">01</div>
+      <div class="layer-name">Gateway</div>
+      <div class="layer-desc">CLI 入口，解析用户输入，入队任务</div>
+      <div class="layer-arrow">↓</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-num" style="background:rgba(124,92,252,0.2);color:var(--accent);">02</div>
+      <div class="layer-name">Queue</div>
+      <div class="layer-desc">任务排队，并发控制，worker 调度</div>
+      <div class="layer-arrow">↓</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-num" style="background:rgba(124,92,252,0.2);color:var(--accent);">03</div>
+      <div class="layer-name">Worker</div>
+      <div class="layer-desc">从队列取任务，分发给 Harness</div>
+      <div class="layer-arrow">↓</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-num" style="background:rgba(124,92,252,0.2);color:var(--accent);">04</div>
+      <div class="layer-name">Harness</div>
+      <div class="layer-desc">Run 生命周期管理，超时控制，错误处理</div>
+      <div class="layer-arrow">↓</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-num" style="background:rgba(79,195,247,0.2);color:var(--accent2);">05</div>
+      <div class="layer-name">Context</div>
+      <div class="layer-desc">构建运行上下文：docs、skills、workspace</div>
+      <div class="layer-arrow">↓</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-num" style="background:rgba(79,195,247,0.2);color:var(--accent2);">06</div>
+      <div class="layer-name">Skills</div>
+      <div class="layer-desc">注入 skill 指令到 system prompt</div>
+      <div class="layer-arrow">↓</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-num" style="background:rgba(79,195,247,0.2);color:var(--accent2);">06.5</div>
+      <div class="layer-name">Memory</div>
+      <div class="layer-desc">会话记忆、working set（聚焦文件、最近文件）</div>
+      <div class="layer-arrow">↓</div>
+    </div>
+    <div class="layer-row highlight-layer">
+      <div class="layer-num" style="background:rgba(255,107,157,0.3);color:var(--accent3);">🎯</div>
+      <div class="layer-name" style="color:var(--accent3);">07-runner</div>
+      <div class="layer-desc"><strong style="color:var(--accent3);">微调目标层</strong> — 模型生成 tool plan 的地方。<br>
+        <code>local-provider.ts</code> 中 1.5B 模型通过 <code>generateObject</code> 输出 <code>{name, args}</code> 格式的工具调用计划。
+      </div>
+      <div class="layer-arrow">↓</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-num" style="background:rgba(107,203,119,0.2);color:var(--green);">08</div>
+      <div class="layer-name">EventBus</div>
+      <div class="layer-desc">事件发布/订阅，各层解耦通信</div>
+      <div class="layer-arrow">↓</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-num" style="background:rgba(107,203,119,0.2);color:var(--green);">09</div>
+      <div class="layer-name">Tool Registry</div>
+      <div class="layer-desc">工具定义注册表：10 个工具的 name/permission/description</div>
+      <div class="layer-arrow">↓</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-num" style="background:rgba(107,203,119,0.2);color:var(--green);">10</div>
+      <div class="layer-name">Executor</div>
+      <div class="layer-desc">权限校验 + 执行工具 + 返回结果</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 2. 微调原理 ═══ -->
+<div class="card">
+  <h2><span class="icon">🧠</span> 二、微调原理</h2>
+
+  <h3>2.1 为什么要微调而非换模型？</h3>
+  <div class="grid-2">
+    <div style="background:rgba(255,107,157,0.05);border-radius:8px;padding:14px;border:1px solid rgba(255,107,157,0.15);">
+      <div style="font-weight:600;color:var(--accent3);margin-bottom:6px;">❌ 当前 1.5B 的问题</div>
+      <ul>
+        <li>不知道<strong>何时</strong>调用工具（准确率 ~40%）</li>
+        <li>依赖 heuristic 关键词匹配补救</li>
+        <li>heuristic 未覆盖的输入全部失败</li>
+        <li>安全对齐过于保守（拒绝情书等合法请求）</li>
+      </ul>
+    </div>
+    <div style="background:rgba(79,195,247,0.05);border-radius:8px;padding:14px;border:1px solid rgba(79,195,247,0.15);">
+      <div style="font-weight:600;color:var(--accent2);margin-bottom:6px;">✅ 为什么 LoRA 微调</div>
+      <ul>
+        <li>保留 1.5B 的推理速度（比大模型快 10x）</li>
+        <li>仅需 ~$3 生成训练数据</li>
+        <li>Colab 免费 T4 可跑，45 分钟完成</li>
+        <li>heuristic 兜底：模型退化时不造成灾难</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>2.2 LoRA 原理</h3>
+  <div style="text-align:center;margin:16px 0;">
+    <svg viewBox="0 0 700 190" style="width:100%;max-width:700px;height:auto;">
+      <!-- 全量微调 -->
+      <rect x="40" y="20" width="120" height="40" rx="6" fill="rgba(255,107,157,0.1)" stroke="var(--accent3)" stroke-width="1.5"/>
+      <text x="100" y="45" text-anchor="middle" fill="var(--accent3)" font-size="13" font-weight="600">全量微调</text>
+      <rect x="40" y="65" width="120" height="28" rx="4" fill="rgba(255,107,157,0.05)" stroke="rgba(255,107,157,0.3)" stroke-width="1"/>
+      <text x="100" y="84" text-anchor="middle" fill="var(--text2)" font-size="10">更新全部 1.5B 参数</text>
+      <text x="100" y="115" text-anchor="middle" fill="var(--text2)" font-size="10">❌ 显存不够 (需要 &gt;24GB)</text>
+      <text x="100" y="135" text-anchor="middle" fill="var(--text2)" font-size="10">❌ 有灾难性遗忘风险</text>
+
+      <!-- 箭头 -->
+      <line x1="165" y1="50" x2="215" y2="50" stroke="var(--border)" stroke-width="2"/>
+      <polygon points="215,45 225,50 215,55" fill="var(--border)"/>
+
+      <!-- LoRA 微调 -->
+      <rect x="230" y="20" width="160" height="40" rx="6" fill="rgba(124,92,252,0.1)" stroke="var(--accent)" stroke-width="1.5"/>
+      <text x="310" y="45" text-anchor="middle" fill="var(--accent)" font-size="13" font-weight="600">LoRA 微调 ✅</text>
+      <rect x="230" y="65" width="160" height="28" rx="4" fill="rgba(124,92,252,0.05)" stroke="rgba(124,92,252,0.3)" stroke-width="1"/>
+      <text x="310" y="84" text-anchor="middle" fill="var(--text2)" font-size="10">冻结原权重，注入低秩矩阵</text>
+      <text x="310" y="115" text-anchor="middle" fill="var(--text2)" font-size="10">✅ T4 16GB 即可运行</text>
+      <text x="310" y="135" text-anchor="middle" fill="var(--text2)" font-size="10">✅ 原能力不丢失</text>
+
+      <!-- 箭头 -->
+      <line x1="395" y1="50" x2="445" y2="50" stroke="var(--border)" stroke-width="2"/>
+      <polygon points="445,45 455,50 445,55" fill="var(--border)"/>
+
+      <!-- QLoRA -->
+      <rect x="460" y="20" width="190" height="40" rx="6" fill="rgba(107,203,119,0.1)" stroke="var(--green)" stroke-width="1.5"/>
+      <text x="555" y="45" text-anchor="middle" fill="var(--green)" font-size="13" font-weight="600">QLoRA (我们用的) ✅</text>
+      <rect x="460" y="65" width="190" height="28" rx="4" fill="rgba(107,203,119,0.05)" stroke="rgba(107,203,119,0.3)" stroke-width="1"/>
+      <text x="555" y="84" text-anchor="middle" fill="var(--text2)" font-size="10">LoRA + 4-bit 量化</text>
+      <text x="555" y="115" text-anchor="middle" fill="var(--text2)" font-size="10">✅ 显存从 ~12GB → ~6GB</text>
+      <text x="555" y="135" text-anchor="middle" fill="var(--text2)" font-size="10">✅ 精度损失 &lt; 1%</text>
+
+      <!-- 公式 -->
+      <text x="310" y="170" text-anchor="middle" fill="var(--text2)" font-size="11">LoRA: W' = W₀ + ΔW = W₀ + BA （B∈ℝ^{d×r}, A∈ℝ^{r×k}, r=16）</text>
+    </svg>
+  </div>
+
+  <h3>2.3 模型内部数据流向（推理时）</h3>
+  <div style="margin:12px 0;">
+    <pre>用户输入: "帮我写一个python代码是斐波那契数列"
+        │
+        ▼
+  ┌───────────────────────────────────────────────────────────────────┐
+  │  07-runner/local-provider.ts  (微调作用层)                         │
+  │                                                                   │
+  │  1. 构建 prompt = system prompt + tool 列表 + 用户输入              │
+  │  2. generateObject({ model: qwen2.5:1.5b, schema: aiSdkPlanSchema })│
+  │  3. 模型输出 JSON → normalizePlannedCalls → PlannedToolCall[]     │
+  └───────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+  output: [{ name: "write_file", args: { path: "...", content: "..." } }]
+        │
+        ▼
+  07-runner/wrapper.ts → 逐工具执行 → 10-executor → 结果返回</pre>
+  </div>
+
+  <h3>2.4 微调前后对比</h3>
+  <table>
+    <tr><th>场景</th><th>微调前</th><th>微调后（期望）</th></tr>
+    <tr><td>"帮我写成粉色"</td><td><span style="color:var(--red);">无工具调用，乱回答</span></td><td><span style="color:var(--green);">patch_file(search:"&lt;/head&gt;", replace:"...")</span></td></tr>
+    <tr><td>"你的json格式是什么"</td><td><span style="color:var(--red);">回声问题</span></td><td><span style="color:var(--green);">无工具，直接回答格式说明</span></td></tr>
+    <tr><td>"帮我写情书"</td><td><span style="color:var(--red);">安全拒绝：不能生成浪漫内容</span></td><td><span style="color:var(--green);">write_file 生成情书内容</span></td></tr>
+    <tr><td>"搜索某某"</td><td><span style="color:var(--red);">hecuristic 未覆盖则不调搜索</span></td><td><span style="color:var(--green);">web_search(query="...")</span></td></tr>
+    <tr><td>"你好"</td><td><span style="color:var(--green);">heuristic 拦截，正确回答</span></td><td><span style="color:var(--green);">依然正确（不退化）</span></td></tr>
+  </table>
+</div>
+
+<!-- ═══ 3. 数据流向 ═══ -->
+<div class="card">
+  <h2><span class="icon">🔄</span> 三、完整数据流向</h2>
+
+  <div class="flowchart">
+    <div class="flow-node"><span class="fn-label">用户输入</span><span class="fn-sub">"写一个html然后打开"</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><span class="fn-label">Gateway</span><span class="fn-sub">解析入队</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><span class="fn-label">Queue</span><span class="fn-sub">调度</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><span class="fn-label">Harness</span><span class="fn-sub">生命周期</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><span class="fn-label">Context</span><span class="fn-sub">构建上下文</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><span class="fn-label">Memory</span><span class="fn-sub">注入 working set</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node target"><span class="fn-label" style="color:var(--accent3);">🎯 Runner</span><span class="fn-sub">模型生成 tool plan</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><span class="fn-label">Executor</span><span class="fn-sub">执行工具</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><span class="fn-label">返回结果</span><span class="fn-sub">回答用户</span></div>
+  </div>
+
+  <h3>Runner 层内部数据流（细粒度）</h3>
+  <div style="margin:12px 0;">
+    <pre>
+<span class="cm">// 输入: MemoryEnrichedRunContext</span>
+{
+  task: { input: <span class="str">"帮我写一个html然后打开"</span> },
+  memory: {
+    workingSet: {
+      focusedFilePath: <span class="str">"workspaces/demo/task_output.html"</span>,
+      openableHtmlPaths: [<span class="str">"workspaces/demo/task_output.html"</span>]
+    }
+  },
+  workspace: { root: <span class="str">"F:/catnipmvp-windows-mainline"</span> }
+}
+       │
+       ▼
+<span class="cm">// Prompt 组装（包含 system prompt + tool list + working memory）</span>
+<span class="kw">const</span> prompt = [
+  <span class="str">"You are a coding agent..."</span>,
+  PLATFORM_HINT,
+  <span class="str">"Current working memory: - Focused file: ..."</span>,
+  <span class="str">"Task: 帮我写一个html然后打开"</span>,
+  <span class="str">"Allowed tools:\n- write_file (medium): Write a single file..."</span>,
+].join(<span class="str">"\n\n"</span>)
+       │
+       ▼
+<span class="cm">// generateObject → 模型输出 JSON</span>
+{
+  plannedToolCalls: [
+    { name: <span class="str">"write_file"</span>, args: { path: <span class="str">"workspaces/demo/task_output.html"</span>, content: <span class="str">"..."</span> } },
+    { name: <span class="str">"open_browser"</span>, args: { path: <span class="str">"workspaces/demo/task_output.html"</span> } }
+  ],
+  finalAnswerPrompt: <span class="str">"已创建并打开 HTML 文件。"</span>
+}
+       │
+       ▼
+<span class="cm">// normalizePlannedCalls → PlannedToolCall[]</span>
+<span class="cm">// 过滤未知工具，规范化参数默认值</span>
+       │
+       ▼
+<span class="cm">// wrapper.ts: 逐工具执行</span>
+<span class="kw">for</span> (<span class="kw">const</span> plannedCall <span class="kw">of</span> plan.plannedToolCalls) {
+  <span class="kw">await</span> executeToolCall(plannedCall)
+}
+       │
+       ▼
+<span class="cm">// Executor: 权限校验(guard.ts) → 执行工具(tools.ts) → 返回结果</span></pre>
+  </div>
+</div>
+
+<!-- ═══ 4. 训练数据方案 ═══ -->
+<div class="card">
+  <h2><span class="icon">📊</span> 四、训练数据方案</h2>
+
+  <h3>4.1 数据格式</h3>
+  <pre>{
+  <span class="kw">"instruction"</span>: <span class="str">"帮我写一个python代码是斐波那契数列"</span>,
+  <span class="kw">"output"</span>: {
+    <span class="kw">"plannedToolCalls"</span>: [
+      {
+        <span class="kw">"name"</span>: <span class="str">"write_file"</span>,         <span class="cm">// ← OpenAI 格式 (原 toolName → name)</span>
+        <span class="kw">"args"</span>: {
+          <span class="kw">"path"</span>: <span class="str">"workspaces/demo/fib.py"</span>,
+          <span class="kw">"content"</span>: <span class="str">"def fib(n): ..."</span>
+        }
+      }
+    ],
+    <span class="kw">"finalAnswerPrompt"</span>: <span class="str">"已创建 fib.py"</span>
+  }
+}</pre>
+
+  <h3>4.2 数据量分配（8000 条）</h3>
+  <div class="cost-row">
+    <div class="cost-card purple">
+      <div class="cc-num">3,500</div>
+      <div class="cc-label">Claude Code 生成</div>
+      <div style="font-size:0.7rem;color:var(--text2);margin-top:4px;">无需工具 + 边界 + 复合 + 修改</div>
+    </div>
+    <div class="cost-card pink">
+      <div class="cc-num">4,500</div>
+      <div class="cc-label">DeepSeek V4 Pro 生成</div>
+      <div style="font-size:0.7rem;color:var(--text2);margin-top:4px;">写代码 + HTML + 搜索 + Shell 等</div>
+    </div>
+    <div class="cost-card green">
+      <div class="cc-num">8,000</div>
+      <div class="cc-label">总计</div>
+      <div style="font-size:0.7rem;color:var(--text2);margin-top:4px;">~$3 成本</div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>类别</th><th>数量</th><th>生成方式</th><th>说明</th></tr>
+    <tr><td>无需工具 Q&A</td><td>1500</td><td><span class="tag tag-purple">Claude</span></td><td>问候、身份、闲聊 — 核心负样本</td></tr>
+    <tr><td>边界案例</td><td>800</td><td><span class="tag tag-purple">Claude</span></td><td>heuristic 漏掉的："改粉色"、"你的json"、"转html"</td></tr>
+    <tr><td>复合任务</td><td>800</td><td><span class="tag tag-purple">Claude</span></td><td>多步："写html然后打开"、"搜索并打开链接"</td></tr>
+    <tr><td>修改/修补</td><td>400</td><td><span class="tag tag-purple">Claude</span></td><td>patch_file 各种变体</td></tr>
+    <tr><td>写代码</td><td>800</td><td><span class="tag tag-pink">DeepSeek</span></td><td>Python/JS/TS/Go/Java/Rust</td></tr>
+    <tr><td>写 HTML</td><td>600</td><td><span class="tag tag-pink">DeepSeek</span></td><td>游戏/工具/页面/可视化</td></tr>
+    <tr><td>写文本</td><td>400</td><td><span class="tag tag-pink">DeepSeek</span></td><td>情书、诗、故事、文章</td></tr>
+    <tr><td>搜索</td><td>500</td><td><span class="tag tag-pink">DeepSeek</span></td><td>web_search + open_browser_search</td></tr>
+    <tr><td>打开浏览器/URL</td><td>600</td><td><span class="tag tag-pink">DeepSeek</span></td><td>open_browser + open_url</td></tr>
+    <tr><td>Shell 命令</td><td>500</td><td><span class="tag tag-pink">DeepSeek</span></td><td>git/npm/dir/type/node</td></tr>
+    <tr><td>读文件/列出文件</td><td>400</td><td><span class="tag tag-pink">DeepSeek</span></td><td>read_file + list_files</td></tr>
+    <tr><td>Git diff</td><td>200</td><td><span class="tag tag-pink">DeepSeek</span></td><td>git_diff</td></tr>
+    <tr><td>情感/闲聊</td><td>500</td><td><span class="tag tag-pink">DeepSeek</span></td><td>对话多样性</td></tr>
+  </table>
+</div>
+
+<!-- ═══ 5. 训练参数 ═══ -->
+<div class="card">
+  <h2><span class="icon">⚙️</span> 五、训练配置</h2>
+
+  <div class="param-grid">
+    <div class="param-item"><div class="pk">基础模型</div><div class="pv">qwen2.5:1.5b</div></div>
+    <div class="param-item"><div class="pk">训练框架</div><div class="pv">Unsloth + Google Colab T4</div></div>
+    <div class="param-item"><div class="pk">LoRA rank</div><div class="pv">16</div></div>
+    <div class="param-item"><div class="pk">LoRA alpha</div><div class="pv">32</div></div>
+    <div class="param-item"><div class="pk">目标模块</div><div class="pv">q_proj, k_proj, v_proj, o_proj</div></div>
+    <div class="param-item"><div class="pk">精度</div><div class="pv">4-bit NF4 (QLoRA)</div></div>
+    <div class="param-item"><div class="pk">学习率</div><div class="pv">2e-4 (AdamW)</div></div>
+    <div class="param-item"><div class="pk">批次大小</div><div class="pv">8 (accumulation=2 → 有效 16)</div></div>
+    <div class="param-item"><div class="pk">训练步数</div><div class="pv">800-1000</div></div>
+    <div class="param-item"><div class="pk">Warmup</div><div class="pv">100 steps</div></div>
+    <div class="param-item"><div class="pk">序列长度</div><div class="pv">4096 tokens</div></div>
+    <div class="param-item"><div class="pk">训练/验证/测试</div><div class="pv">85% / 10% / 5%</div></div>
+  </div>
+
+  <h3>训练流程</h3>
+  <div class="flowchart">
+    <div class="flow-node highlight"><span class="fn-label">JSONL 数据</span><span class="fn-sub">8000 条</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node highlight"><span class="fn-label">格式化</span><span class="fn-sub">对话模板</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node highlight"><span class="fn-label">QLoRA 训练</span><span class="fn-sub">4-bit, rank=16</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node highlight"><span class="fn-label">合并权重</span><span class="fn-sub">merge LoRA</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node highlight"><span class="fn-label">GGUF 导出</span><span class="fn-sub">llama.cpp</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node highlight"><span class="fn-label">Ollama</span><span class="fn-sub">ollama create</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node highlight"><span class="fn-label">Catnip</span><span class="fn-sub">CATNIP_LOCAL_MODEL</span></div>
+  </div>
+</div>
+
+<!-- ═══ 6. 评估 ═══ -->
+<div class="card">
+  <h2><span class="icon">📈</span> 六、评估体系</h2>
+
+  <table>
+    <tr><th>指标</th><th>当前</th><th>目标</th><th>测量方式</th></tr>
+    <tr><td>工具调用准确率</td><td><span style="color:var(--red);">~40%</span></td><td><span style="color:var(--green);">~70%</span></td><td>400 条测试集，tool plan 是否正确</td></tr>
+    <tr><td>无工具场景准确率</td><td><span style="color:var(--red);">~60%</span></td><td><span style="color:var(--green);">~85%</span></td><td>不需要工具时是否返回空数组</td></tr>
+    <tr><td>参数正确性</td><td><span style="color:var(--red);">~50%</span></td><td><span style="color:var(--green);">~80%</span></td><td>路径/查询/URL 格式是否合法</td></tr>
+    <tr><td>端到端测试通过率</td><td><span style="color:var(--red);">56%</span></td><td><span style="color:var(--green);">≥75%</span></td><td>22 条完整用例执行</td></tr>
+    <tr><td>安全拒绝误伤</td><td><span style="color:var(--red);">~50%</span></td><td><span style="color:var(--green);">&lt;20%</span></td><td>情书/情歌类是否不应拒绝</td></tr>
+  </table>
+</div>
+
+<!-- ═══ 7. 执行时间线 ═══ -->
+<div class="card">
+  <h2><span class="icon">⏱️</span> 七、执行时间线</h2>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-phase">Phase 1A — Claude Code 生成 3500 条</div>
+      <div class="tl-desc">无需工具 Q&A + 边界案例 + 复合任务 + 修改/修补</div>
+      <div class="tl-time">~2 小时</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-phase">Phase 1B — DeepSeek V4 Pro 生成 4500 条</div>
+      <div class="tl-desc">写代码/HTML/文本 + 搜索 + Shell + 浏览器 + 情感闲聊</div>
+      <div class="tl-time">~30 分钟 + $3</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-phase">Phase 1C — 格式校验 + 人工抽检</div>
+      <div class="tl-desc">自动校验脚本 + 随机 5% 人工审查</div>
+      <div class="tl-time">~1 小时</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-phase">Phase 2 — Colab 训练</div>
+      <div class="tl-desc">Unsloth + QLoRA 4-bit, 800-1000 steps</div>
+      <div class="tl-time">~45 分钟</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-phase">Phase 3 — 评估</div>
+      <div class="tl-desc">400 条测试集 + 22 条端到端测试</div>
+      <div class="tl-time">~30 分钟</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-phase">Phase 4 — 部署</div>
+      <div class="tl-desc">合并 LoRA → GGUF → Ollama → Catnip</div>
+      <div class="tl-time">~30 分钟</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-phase">Phase 5 — 迭代优化</div>
+      <div class="tl-desc">根据评估结果补充 bad case，第二轮微调</div>
+      <div class="tl-time">按需</div>
+    </div>
+  </div>
+
+  <div class="cost-row" style="margin-top:20px;">
+    <div class="cost-card green">
+      <div class="cc-num">~5 小时</div>
+      <div class="cc-label">总执行时间</div>
+    </div>
+    <div class="cost-card pink">
+      <div class="cc-num">~$3</div>
+      <div class="cc-label">总 API 成本</div>
+    </div>
+    <div class="cost-card purple">
+      <div class="cc-num">8000 条</div>
+      <div class="cc-label">训练数据总量</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 8. 风险 ═══ -->
+<div class="card">
+  <h2><span class="icon">⚠️</span> 八、风险与缓解</h2>
+  <table>
+    <tr><th>风险</th><th>概率</th><th>缓解措施</th></tr>
+    <tr><td>DeepSeek V4 Pro 格式错误</td><td>中</td><td>自动校验脚本过滤非法格式行 + 重试</td></tr>
+    <tr><td>训练数据多样性不足</td><td>中</td><td>DeepSeek 负责自然语言变体，Claude 负责边界案例</td></tr>
+    <tr><td>过拟合训练集</td><td>低</td><td>验证集 10% + loss 监控 + 早停</td></tr>
+    <tr><td>灾难性遗忘</td><td>低</td><td>30% 纯 Q&A 数据 + LoRA rank=16 + 低学习率</td></tr>
+    <tr><td>微调后与 heuristic 冲突</td><td>低</td><td>heuristic 优先级高于模型输出，兜底生效</td></tr>
+    <tr><td>Colab T4 不够</td><td>极低</td><td>QLoRA 4-bit 只需 ~6GB，T4 有 16GB</td></tr>
+  </table>
+</div>
+
+<!-- ═══ Footer ═══ -->
+<div style="text-align:center;padding:30px 0;color:var(--text2);font-size:0.8rem;">
+  Catnip Agent Fine-Tuning Plan &mdash; 2026-05-27 &mdash; feat/windows4.0-openaitooljson
+</div>
+
+</div>
+</body>
+</html>
