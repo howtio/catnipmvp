@@ -1133,13 +1133,28 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
     console.log("Type your task and press Enter. Use /help, /history, /last, /clear or /exit.");
     console.log("While a task is running, extra input is captured as follow-up refinements for the next turn.");
     rl.setPrompt(getInteractivePrompt());
-    rl.prompt();
+
+    // Safe wrapper around rl.prompt() that handles ERR_USE_AFTER_CLOSE
+    function safePrompt(): void {
+      try {
+        rl.prompt();
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "ERR_USE_AFTER_CLOSE") {
+          // readline was closed (e.g., piped input ended), exit gracefully
+          exitRequested = true;
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    safePrompt();
 
     try {
       rl.on("line", (rawLine) => {
         const line = rawLine.trim();
         if (line.length === 0) {
-          rl.prompt();
+          safePrompt();
           return;
         }
 
@@ -1156,13 +1171,13 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
 
         if (command.type === "help") {
           printHelp();
-          rl.prompt();
+          safePrompt();
           return;
         }
 
         if (command.type === "history") {
           printHistory(history);
-          rl.prompt();
+          safePrompt();
           return;
         }
 
@@ -1170,23 +1185,23 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
           const lastResult = history.at(-1);
           if (!lastResult) {
             console.log("[gateway] no previous result in this interactive session");
-            rl.prompt();
+            safePrompt();
             return;
           }
           printRunResult(lastResult);
-          rl.prompt();
+          safePrompt();
           return;
         }
 
         if (command.type === "clear") {
           history.length = 0;
           console.log("[gateway] cleared interactive session history");
-          rl.prompt();
+          safePrompt();
           return;
         }
 
         if (command.type !== "task") {
-          rl.prompt();
+          safePrompt();
           return;
         }
 
@@ -1196,12 +1211,12 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
           console.log(
             `[interactive] captured refinement for task ${activeTask.ordinal}: ${truncateText(taskInput, 90)}`,
           );
-          rl.prompt();
+          safePrompt();
           return;
         }
 
         startInteractiveTask(taskInput, history.length + 1);
-        rl.prompt();
+        safePrompt();
       });
 
       rl.on("close", () => {
@@ -1243,7 +1258,7 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
             `[interactive] scheduling follow-up for task ${finishedTask.ordinal} with ${finishedTask.supplements.length} refinement(s)`,
           );
           startInteractiveTask(followUpInput, history.length + 1);
-          rl.prompt();
+          safePrompt();
           return;
         }
 
@@ -1252,7 +1267,7 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
           return;
         }
 
-        rl.prompt();
+        safePrompt();
       })().catch((error: unknown) => {
         activeTask = undefined;
         const message = error instanceof Error ? error.message : String(error);
@@ -1262,7 +1277,7 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
           rl.close();
           return;
         }
-        rl.prompt();
+        safePrompt();
       });
 
       activeTask = {
@@ -1296,7 +1311,17 @@ export function createGatewayLayer(deps: GatewayLayerDeps): GatewayLayerApi {
       }
 
       if (parsed.interactive || process.stdin.isTTY) {
-        await startInteractiveCli();
+        if (process.stdin.isTTY) {
+          await startInteractiveCli();
+        } else {
+          const stdinText = await readStdinText();
+          if (stdinText.length > 0) {
+            await runTaskBatch([stdinText], createId("session"), debugEnabled);
+          } else {
+            console.error("[gateway] no task input provided");
+            process.exitCode = 1;
+          }
+        }
         return;
       }
 
