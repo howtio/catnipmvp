@@ -103,6 +103,16 @@
   - `"你好"` → 0 工具，直接回答（1.3s）
 - 所有 50 单元测试通过，typecheck 通过
 
+### windows3.0 修复 6（2026-05-27）
+
+- **修复 executor payload 未解包** — `summarizeToolOutcome` 现在解开 executor 的 `{toolName, permission, category, stage, payload}` 包装，使 memory 层能正确读取 `result.path`。修复 "帮我浏览器打开它" fallback 到 `generated.html` 的问题
+- **身份回答覆盖** — 本地模型自称 Qwen，heuristic 拦截 "你是谁/你叫什么" 后返回 "我是 Catnip Agent"
+- **1.5B 完整测试记录** — 新增 `docs/1.5BTESTLOG.md`，包含 22 项测试、通过率 56%、以及 LoRA 微调方案设计
+- **验证**：
+  - `"你是谁"` → "我是 Catnip Agent" ✅
+  - `"帮我打开它"`（写 HTML 后） → 正确打开 `task_output.html` ✅
+  - 所有 50 单元测试通过
+
 ### 回滚判断
 
 - 本轮未发生需要回滚的功能性错误
