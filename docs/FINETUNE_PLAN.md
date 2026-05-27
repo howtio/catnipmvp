@@ -1,8 +1,8 @@
-# Catnip 1.5B 微调执行计划
+# Catnip Gemma 3 1B 微调执行计划
 
 ## 概览
 
-对 qwen2.5:1.5b 进行 LoRA 微调，提升工具调用决策能力。采用 **Claude Code + DeepSeek V4 Pro 混合生成** 训练数据。
+对 gemma3:1b 进行 LoRA 微调，提升工具调用决策能力。采用 **Claude Code + DeepSeek V4 Pro 混合生成** 训练数据。
 
 **当前**: 工具调用准确率 ~40%，heuristic 兜底后整体 56%
 **目标**: 工具调用准确率 ~70%，端到端 22 条测试通过率 75%
@@ -43,6 +43,8 @@
 ### 1.3 数据量分配
 
 **总计 8000 条，两种生成方式：**
+
+> ⚠️ Gemma 3 1B 中文能力不如 Qwen 原生。建议 DeepSeek 生成时增加英文样本比例，中文:英文 ≈ 6:4（原 Qwen 方案约 9:1）。
 
 #### A. Claude Code 生成 (3500 条) — 需要代码库理解
 
@@ -125,7 +127,7 @@ DeepSeek V4 Pro 计算明细：
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
-| 基础模型 | qwen2.5:1.5b | Ollama 可用 |
+| 基础模型 | gemma3:1b | Ollama 可用 |
 | LoRA rank | 16 | 更新矩阵秩 |
 | LoRA alpha | 32 | 缩放因子 |
 | 目标模块 | q_proj, k_proj, v_proj, o_proj | 全部 attention |
@@ -189,12 +191,12 @@ DeepSeek V4 Pro 计算明细：
     │
     ▼
 创建 Ollama 模型
-echo "FROM qwen2.5-catnip.gguf" > Modelfile
-ollama create qwen2.5:catnip-tuned -f Modelfile
+echo "FROM gemma3-catnip.gguf" > Modelfile
+ollama create gemma3:catnip-tuned -f Modelfile
     │
     ▼
 配置 catnip 使用新模型
-set CATNIP_LOCAL_MODEL=qwen2.5:catnip-tuned
+set CATNIP_LOCAL_MODEL=gemma3:catnip-tuned
 set CATNIP_RUNNER_PROVIDER=local
 catnip.exe
     │

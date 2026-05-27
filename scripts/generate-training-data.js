@@ -313,7 +313,7 @@ function generateBoundarySample() {
     },
     {
       input: "你是什么模型",
-      output: { plannedToolCalls: [], finalAnswerPrompt: "我基于 qwen2.5:1.5b 模型运行，针对工具调用进行了优化。" },
+      output: { plannedToolCalls: [], finalAnswerPrompt: "我基于 gemma3:1b 模型运行，针对工具调用进行了优化。" },
     },
     {
       input: "帮我删掉工作区里的文件",

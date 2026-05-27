@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Catnip 1.5B 微调方案 — 架构·Runner原理·执行计划</title>
+<title>Catnip Gemma 3 1B 微调方案 — 架构·Runner原理·执行计划</title>
 <style>
 :root {
   --bg: #0f0f1a;
@@ -248,14 +248,14 @@ pre .num { color: var(--accent4); }
 
 <!-- ═══ HEADER ═══ -->
 <header>
-  <h1>Catnip Agent 1.5B 微调方案</h1>
-  <p>qwen2.5:1.5b LoRA Fine-Tuning &bull; 工具调用决策提升 &bull; OpenAI 格式</p>
+  <h1>Catnip Agent Gemma 3 1B 微调方案</h1>
+  <p>gemma3:1b LoRA Fine-Tuning &bull; 工具调用决策提升 &bull; OpenAI 格式</p>
 </header>
 
 <!-- ═══ 1. 系统架构 ═══ -->
 <div class="card">
   <h2><span class="icon">🏗️</span> 一、系统架构：11 层全览</h2>
-  <p>Catnip 从用户输入到工具执行经过 11 层。微调的目标层是 <span class="tag tag-pink">07-runner</span> 中的 <code>local-provider.ts</code> — 即 1.5B 模型做工具规划的地方。</p>
+  <p>Catnip 从用户输入到工具执行经过 11 层。微调的目标层是 <span class="tag tag-pink">07-runner</span> 中的 <code>local-provider.ts</code> — 即 1B 模型做工具规划的地方。</p>
 
   <div class="layer-diagram">
     <div class="layer-row">
@@ -304,7 +304,7 @@ pre .num { color: var(--accent4); }
       <div class="layer-num" style="background:rgba(255,107,157,0.3);color:var(--accent3);">🎯</div>
       <div class="layer-name" style="color:var(--accent3);">07-runner</div>
       <div class="layer-desc"><strong style="color:var(--accent3);">微调目标层</strong> — 模型生成 tool plan 的地方。<br>
-        <code>local-provider.ts</code> 中 1.5B 模型通过 <code>generateObject</code> 输出 <code>{name, args}</code> 格式的工具调用计划。
+        <code>local-provider.ts</code> 中 Gemma 3 1B 模型通过 <code>generateObject</code> 输出 <code>{name, args}</code> 格式的工具调用计划。
       </div>
       <div class="layer-arrow">↓</div>
     </div>
@@ -345,7 +345,7 @@ pre .num { color: var(--accent4); }
       </tr>
       <tr>
         <td><code>local-provider.ts</code></td>
-        <td><strong>🎯 微调直接作用文件</strong> — 1.5B 模型的 <code>generateObject</code> 调用 + heuristic 规则覆盖</td>
+        <td><strong>🎯 微调直接作用文件</strong> — Gemma 3 1B 模型的 <code>generateObject</code> 调用 + heuristic 规则覆盖</td>
         <td>模型的 tool plan 在此生成，heuristic 在此覆盖</td>
       </tr>
       <tr>
@@ -367,23 +367,23 @@ pre .num { color: var(--accent4); }
       <div class="pb-title" style="color:var(--accent3);">路径 A: plan()</div>
       <div class="pb-row"><span class="pb-key">谁在用</span><span class="pb-val">HeuristicProvider, LocalProvider, AiSdkProvider</span></div>
       <div class="pb-row"><span class="pb-key">流程</span><span class="pb-val">模型一次性生成全部 tool plan → wrapper 逐工具执行</span></div>
-      <div class="pb-row"><span class="pb-key">1.5B</span><span class="pb-val">✅ 当前路径（微调作用于此路径）</span></div>
+      <div class="pb-row"><span class="pb-key">Gemma 3 1B</span><span class="pb-val">✅ 当前路径（微调作用于此路径）</span></div>
     </div>
     <div class="provider-box">
       <div class="pb-title" style="color:var(--green);">路径 B: runWithTools()</div>
       <div class="pb-row"><span class="pb-key">谁在用</span><span class="pb-val">DeepSeekProvider</span></div>
       <div class="pb-row"><span class="pb-key">流程</span><span class="pb-val">AI SDK 内置 tool calling 循环，模型自主决定调哪个工具</span></div>
-      <div class="pb-row"><span class="pb-key">1.5B</span><span class="pb-val">❌ 1.5B 不支持（能力不够）</span></div>
+      <div class="pb-row"><span class="pb-key">Gemma 3 1B</span><span class="pb-val">❌ 1B 不支持（能力不够）</span></div>
     </div>
     <div class="provider-box">
       <div class="pb-title" style="color:var(--accent4);">路径 C: Heuristic</div>
       <div class="pb-row"><span class="pb-key">谁在用</span><span class="pb-val">HeuristicProvider（无模型时兜底）</span></div>
       <div class="pb-row"><span class="pb-key">流程</span><span class="pb-val">纯关键词匹配，没有模型调用</span></div>
-      <div class="pb-row"><span class="pb-key">1.5B</span><span class="pb-val">⚠️ 微调后退化时 fallback</span></div>
+      <div class="pb-row"><span class="pb-key">Gemma 3 1B</span><span class="pb-val">⚠️ 微调后退化时 fallback</span></div>
     </div>
   </div>
 
-  <h3>2.3 1.5B 模型在 Runner 中的完整工作流</h3>
+  <h3>2.3 Gemma 3 1B 模型在 Runner 中的完整工作流</h3>
   <div class="runner-diagram">
     <div class="rd-step" style="border-left:3px solid var(--accent2);">
       <div class="rd-num" style="background:rgba(79,195,247,0.2);color:var(--accent2);">1</div>
@@ -397,7 +397,7 @@ pre .num { color: var(--accent4); }
       <div class="rd-num" style="background:rgba(124,92,252,0.2);color:var(--accent);">2</div>
       <div class="rd-content">
         <div class="rd-title">模型推理 — 这是微调发生的地方</div>
-        <div class="rd-desc"><code>generateObject({ model: qwen2.5:1.5b, schema: aiSdkPlanSchema, prompt })</code> — 模型根据 prompt 和 schema 约束输出结构化 JSON</div>
+        <div class="rd-desc"><code>generateObject({ model: gemma3:1b, schema: aiSdkPlanSchema, prompt })</code> — 模型根据 prompt 和 schema 约束输出结构化 JSON</div>
         <div class="rd-code">输出: { plannedToolCalls: [{ name, args }], finalAnswerPrompt }</div>
       </div>
     </div>
@@ -405,7 +405,7 @@ pre .num { color: var(--accent4); }
       <div class="rd-num" style="background:rgba(255,107,157,0.2);color:var(--accent3);">3</div>
       <div class="rd-content">
         <div class="rd-title">Heuristic 覆盖（local-provider 特有）</div>
-        <div class="rd-desc">检查用户输入是否匹配关键词。匹配则<strong>丢弃模型输出</strong>，用 heuristic 规则替换。这是 1.5B 模型的兜底策略。</div>
+        <div class="rd-desc">检查用户输入是否匹配关键词。匹配则<strong>丢弃模型输出</strong>，用 heuristic 规则替换。这是 1B 模型的兜底策略。</div>
         <div class="rd-code">if (/写|创建|generate/.test(task)) → bypass model, use heuristic write_file</div>
       </div>
     </div>
@@ -468,7 +468,7 @@ pre .num { color: var(--accent4); }
   <table>
     <tr><th>Provider</th><th>使用模型</th><th>生成方式</th><th>heuristic</th><th>适用场景</th></tr>
     <tr><td>Heuristic</td><td>无</td><td>纯关键词匹配</td><td>自身就是</td><td>兜底、开发测试</td></tr>
-    <tr><td>Local (🎯)</td><td>qwen2.5:1.5b</td><td>generateObject + heuristic 覆盖</td><td>有，优先于模型</td><td>本地 1.5B 部署</td></tr>
+    <tr><td>Local (🎯)</td><td>gemma3:1b</td><td>generateObject + heuristic 覆盖</td><td>有，优先于模型</td><td>本地 1B 部署</td></tr>
     <tr><td>AiSdk</td><td>deepseek-v3 等</td><td>generateObject</td><td>无</td><td>云端 API</td></tr>
     <tr><td>DeepSeek</td><td>deepseek-chat</td><td>runWithTools (AI SDK tool calling)</td><td>无</td><td>云端 API，支持多轮</td></tr>
   </table>
@@ -481,7 +481,7 @@ pre .num { color: var(--accent4); }
   <h3>3.1 为什么要微调而非换模型？</h3>
   <div class="grid-2">
     <div style="background:rgba(255,107,157,0.05);border-radius:8px;padding:14px;border:1px solid rgba(255,107,157,0.15);">
-      <div style="font-weight:600;color:var(--accent3);margin-bottom:6px;">❌ 当前 1.5B 的问题</div>
+      <div style="font-weight:600;color:var(--accent3);margin-bottom:6px;">❌ 当前 1B 模型的问题</div>
       <ul>
         <li>不知道<strong>何时</strong>调用工具（准确率 ~40%）</li>
         <li>依赖 heuristic 关键词匹配补救</li>
@@ -492,7 +492,7 @@ pre .num { color: var(--accent4); }
     <div style="background:rgba(79,195,247,0.05);border-radius:8px;padding:14px;border:1px solid rgba(79,195,247,0.15);">
       <div style="font-weight:600;color:var(--accent2);margin-bottom:6px;">✅ 为什么 LoRA 微调</div>
       <ul>
-        <li>保留 1.5B 的推理速度（比大模型快 10x）</li>
+        <li>保留 1B 的推理速度（比大模型快 10x）</li>
         <li>仅需 ~$3 生成训练数据</li>
         <li>Colab 免费 T4 可跑，45 分钟完成</li>
         <li>heuristic 兜底：模型退化时不造成灾难</li>
@@ -507,7 +507,7 @@ pre .num { color: var(--accent4); }
       <rect x="40" y="20" width="120" height="40" rx="6" fill="rgba(255,107,157,0.1)" stroke="var(--accent3)" stroke-width="1.5"/>
       <text x="100" y="45" text-anchor="middle" fill="var(--accent3)" font-size="13" font-weight="600">全量微调</text>
       <rect x="40" y="65" width="120" height="28" rx="4" fill="rgba(255,107,157,0.05)" stroke="rgba(255,107,157,0.3)" stroke-width="1"/>
-      <text x="100" y="84" text-anchor="middle" fill="var(--text2)" font-size="10">更新全部 1.5B 参数</text>
+      <text x="100" y="84" text-anchor="middle" fill="var(--text2)" font-size="10">更新全部 1B 参数</text>
       <text x="100" y="115" text-anchor="middle" fill="var(--text2)" font-size="10">❌ 显存不够 (需要 &gt;24GB)</text>
       <text x="100" y="135" text-anchor="middle" fill="var(--text2)" font-size="10">❌ 有灾难性遗忘风险</text>
       <line x1="165" y1="50" x2="215" y2="50" stroke="var(--border)" stroke-width="2"/>
@@ -626,7 +626,7 @@ pre .num { color: var(--accent4); }
   <h2><span class="icon">⚙️</span> 六、训练配置</h2>
 
   <div class="param-grid">
-    <div class="param-item"><div class="pk">基础模型</div><div class="pv">qwen2.5:1.5b</div></div>
+    <div class="param-item"><div class="pk">基础模型</div><div class="pv">gemma3:1b</div></div>
     <div class="param-item"><div class="pk">训练框架</div><div class="pv">Unsloth + Google Colab T4</div></div>
     <div class="param-item"><div class="pk">LoRA rank</div><div class="pv">16</div></div>
     <div class="param-item"><div class="pk">LoRA alpha</div><div class="pv">32</div></div>
@@ -769,8 +769,8 @@ const SIM_LINES = [
   { tag: 'plan', text: '📝 task: "帮我写一个贪吃蛇html然后打开"' },
   { tag: 'plan', text: '' },
   { tag: 'plan', text: '═══ 2. generateObject（🎯 微调作用点）═══' },
-  { tag: 'plan', text: '⚡ 调用: generateObject({ model: qwen2.5:1.5b, schema: aiSdkPlanSchema })' },
-  { tag: 'plan', text: '⏳ 模型推理中... (1.5B, ~3秒)' },
+  { tag: 'plan', text: '⚡ 调用: generateObject({ model: gemma3:1b, schema: aiSdkPlanSchema })' },
+  { tag: 'plan', text: '⏳ 模型推理中... (1B, ~2秒)' },
   { tag: 'plan', text: '✅ 模型输出 JSON:' },
   { tag: 'plan', text: '   {', cls: 'hl' },
   { tag: 'plan', text: '     "plannedToolCalls": [', cls: 'hl' },

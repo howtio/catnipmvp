@@ -1,10 +1,10 @@
-# Catnip Agent 1.5B 微调方案
+# Catnip Agent Gemma 3 1B 微调方案
 
 ## 概述
 
-对 qwen2.5:1.5b 进行 LoRA 微调，提升其工具调用决策能力。
+对 gemma3:1b 进行 LoRA 微调，提升其工具调用决策能力。
 
-**当前问题**: 1.5B 模型不知道何时调用工具（准确率 ~40%），依赖 heuristic 关键词匹配补救。
+**当前问题**: 1B 模型不知道何时调用工具（准确率 ~40%），依赖 heuristic 关键词匹配补救。
 
 **目标**: 工具调用准确率从 ~40% → ~70%，减少对 heuristic 的依赖。
 
@@ -117,7 +117,7 @@
    └── 加载 JSON 训练数据
 
 3. 加载基础模型 (4-bit)
-   └── model = FastLanguageModel.from_pretrained("unsloth/qwen2.5-1.5b-bnb-4bit")
+   └── model = FastLanguageModel.from_pretrained("unsloth/gemma-3-1b-bnb-4bit")
 
 4. 配置 LoRA
    └── rank=16, alpha=32, target_modules=[q_proj,k_proj,v_proj,o_proj]
@@ -145,7 +145,7 @@
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
-| 基础模型 | qwen2.5:1.5b | 当前 Ollama 模型 |
+| 基础模型 | gemma3:1b | 当前 Ollama 模型 |
 | LoRA rank | 16 | 参数更新矩阵的秩 |
 | LoRA alpha | 32 | 缩放因子 |
 | 目标模块 | q_proj, k_proj, v_proj, o_proj | 所有 attention 投影 |
@@ -173,30 +173,30 @@ tokenizer.save_pretrained("catnip-lora-adapter")
 
 ```python
 from unsloth import FastLanguageModel
-model, tokenizer = FastLanguageModel.from_pretrained("qwen2.5:1.5b")
+model, tokenizer = FastLanguageModel.from_pretrained("gemma3:1b")
 model.load_adapter("catnip-lora-adapter")
 merged = model.merge_and_unload()
-merged.save_pretrained("qwen2.5-catnip-merged")
+merged.save_pretrained("gemma3-catnip-merged")
 ```
 
 ### 4.3 导出 Ollama GGUF
 
 ```bash
 # 使用 llama.cpp 转换
-python convert_hf_to_gguf.py qwen2.5-catnip-merged --outfile qwen2.5-catnip.gguf
+python convert_hf_to_gguf.py gemma3-catnip-merged --outfile gemma3-catnip.gguf
 
 # 创建 Modelfile
-echo "FROM qwen2.5-catnip.gguf" > Modelfile
+echo "FROM gemma3-catnip.gguf" > Modelfile
 
 # 导入到 Ollama
-ollama create qwen2.5:catnip-tuned -f Modelfile
+ollama create gemma3:catnip-tuned -f Modelfile
 ```
 
 ### 4.4 在 Catnip 中使用
 
 ```bash
 # 设置环境变量
-set CATNIP_LOCAL_MODEL=qwen2.5:catnip-tuned
+set CATNIP_LOCAL_MODEL=gemma3:catnip-tuned
 set CATNIP_RUNNER_PROVIDER=local
 
 # 运行
@@ -228,7 +228,7 @@ catnip.exe
 1. 对测试集每条输入，让模型生成 tool plan
 2. 对比生成的 tool plan 与期望 plan
 3. 计算每类的准确率
-4. 端到端 22 条测试用例（来自 1.5BTESTLOG.md）
+4. 端到端 22 条测试用例（来自 1BTESTLOG.md）
 ```
 
 ### 5.3 预期指标
