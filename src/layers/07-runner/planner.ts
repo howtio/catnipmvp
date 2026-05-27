@@ -15,6 +15,18 @@ export interface RunnerRunResult {
   toolSummaries: ToolExecutionSummary[];
 }
 
+function unwrapExecutorResult(result: unknown): unknown {
+  // Executor wraps actual tool result in { toolName, permission, category, stage, payload }.
+  // Unwrap to get the real result (path, content, etc.) for memory extraction and final answer.
+  if (result !== null && typeof result === "object" && !Array.isArray(result)) {
+    const record = result as Record<string, unknown>;
+    if ("payload" in record) {
+      return record.payload;
+    }
+  }
+  return result;
+}
+
 export function summarizeToolOutcome(
   plannedCall: PlannedToolCall,
   outcome: ToolCallResultEvent | ToolCallFailedEvent,
@@ -24,7 +36,7 @@ export function summarizeToolOutcome(
       toolName: plannedCall.toolName,
       ok: true,
       reason: plannedCall.reason,
-      result: outcome.result,
+      result: unwrapExecutorResult(outcome.result),
     };
   }
 

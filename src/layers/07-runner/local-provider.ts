@@ -341,13 +341,16 @@ export function createLocalRunnerProvider(options: LocalRunnerProviderOptions = 
 
       // Greeting / identity check: answer directly without tools.
       // 1.5B models tend to plan read_file or shell_exec for simple Q&A, so intercept early.
+      // Also override identity answers since small models introduce themselves as Qwen.
       if (
         /^(你好|hello\b|hi\b|hey\b|您好)\b/i.test(trimmedTask) ||
         /你是谁|你叫什么|你是什么|who are you|what are you/i.test(task)
       ) {
         return {
           plannedToolCalls: [],
-          finalAnswerPrompt: object.finalAnswerPrompt,
+          finalAnswerPrompt: /你是谁|你叫什么|你是什么|who are you|what are you/i.test(task)
+            ? "我是 Catnip Agent，一个基于本地模型的 AI 助手。有什么可以帮助你的吗？"
+            : object.finalAnswerPrompt,
         };
       }
 
