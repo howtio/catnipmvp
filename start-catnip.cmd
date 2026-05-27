@@ -32,7 +32,7 @@ goto :run
 :: ============================================
 :local_mode
 set CATNIP_RUNNER_PROVIDER=local
-if "%CATNIP_LOCAL_MODEL%"=="" set CATNIP_LOCAL_MODEL=qwen2.5:1.5b
+if "%CATNIP_LOCAL_MODEL%"=="" set CATNIP_LOCAL_MODEL=gemma3:1b
 echo [LOCAL] Using model: %CATNIP_LOCAL_MODEL%
 echo [LOCAL] Make sure Ollama is running (ollama serve)
 goto :run
